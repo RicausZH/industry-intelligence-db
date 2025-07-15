@@ -5,7 +5,8 @@
   "main": "scripts/setup-db.js",
   "scripts": {
     "setup": "node scripts/setup-db.js",
-    "process-wb": "node scripts/process-wb-data.js",
+    "download": "node scripts/download-data.js",
+    "process-wb": "node scripts/download-data.js && node scripts/process-wb-data.js",
     "start": "node scripts/setup-db.js"
   },
   "dependencies": {
