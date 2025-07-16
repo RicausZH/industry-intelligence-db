@@ -1,7 +1,7 @@
 {
   "name": "industry-intelligence-db",
   "version": "1.0.0",
-  "description": "Database service for multi-industry intelligence with secure data processing",
+  "description": "Database service for multi-industry intelligence with enhanced processing",
   "main": "scripts/setup-db.js",
   "scripts": {
     "setup": "node scripts/setup-db.js",
@@ -10,6 +10,7 @@
     "process-wb-enhanced": "node scripts/process-wb-enhanced.js",
     "process-wb-simple": "node scripts/process-wb-simple.js",
     "process-wb-secure": "node scripts/process-wb-secure.js",
+    "process-wb-production": "node scripts/process-wb-enhanced.js",
     "download": "node scripts/download-data.js",
     "start": "node scripts/setup-db.js",
     "dev": "nodemon scripts/setup-db.js",
@@ -17,7 +18,7 @@
     "lint": "echo \"No linting configured\" && exit 0",
     "security-audit": "npm audit --audit-level moderate",
     "db-migrate": "node scripts/setup-db.js",
-    "db-seed": "node scripts/process-wb-secure.js"
+    "db-seed": "node scripts/process-wb-enhanced.js"
   },
   "dependencies": {
     "pg": "^8.11.0",
@@ -43,7 +44,8 @@
     "data-processing",
     "csv",
     "n8n",
-    "automation"
+    "automation",
+    "enhanced"
   ],
   "author": "Eric Markowski",
   "license": "MIT",
