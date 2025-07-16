@@ -5,14 +5,44 @@
   "main": "scripts/setup-db.js",
   "scripts": {
     "setup": "node scripts/setup-db.js",
+    "process-wb": "node scripts/process-wb-data.js",
     "process-wb-complete": "node scripts/process-wb-complete.js",
-    "start": "node scripts/setup-db.js"
+    "process-wb-enhanced": "node scripts/process-wb-enhanced.js",
+    "download": "node scripts/download-data.js",
+    "start": "node scripts/setup-db.js",
+    "dev": "nodemon scripts/setup-db.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {
     "pg": "^8.11.0",
     "csv-parser": "^3.0.0",
     "axios": "^1.6.0",
     "fs-extra": "^11.1.1",
-    "dotenv": "^16.3.1"
-  }
+    "dotenv": "^16.3.1",
+    "https": "^1.0.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": [
+    "world-bank",
+    "economic-data",
+    "industry-intelligence",
+    "database",
+    "api",
+    "postgresql"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/industry-intelligence-db.git"
+  },
+  "bugs": {
+    "url": "https://github.com/yourusername/industry-intelligence-db/issues"
+  },
+  "homepage": "https://github.com/yourusername/industry-intelligence-db#readme"
 }
