@@ -6,7 +6,7 @@ const { INDUSTRY_INDICATORS } = require('./industry-config');
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
-  max: 10, // Connection limit for security
+  max: 10,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 2000,
 });
@@ -25,26 +25,19 @@ function validateURL(url) {
 
 function sanitizeString(str, maxLength = 255) {
   if (!str || typeof str !== 'string') return null;
-  
-  // Remove potentially dangerous characters
   const sanitized = str
-    .replace(/[<>\"'&]/g, '') // Remove HTML/SQL injection chars
-    .replace(/[\x00-\x1F\x7F]/g, '') // Remove control characters
+    .replace(/[<>\"'&]/g, '')
+    .replace(/[\x00-\x1F\x7F]/g, '')
     .trim()
     .substring(0, maxLength);
-  
   return sanitized || null;
 }
 
 function validateValue(value) {
   if (!value || value === '' || value === '..') return null;
-  
   const numValue = parseFloat(value);
   if (isNaN(numValue) || !isFinite(numValue)) return null;
-  
-  // Reasonable bounds for economic indicators
   if (numValue < -1000000 || numValue > 1000000000) return null;
-  
   return numValue;
 }
 
@@ -87,7 +80,7 @@ function getIndicatorIndustry(indicatorCode) {
   return 'general';
 }
 
-// Enhanced CSV processing with validation and timeout
+// Enhanced CSV processing with redirect handling
 async function processCSVFromURL(url, processingFunction) {
   const validatedUrl = validateURL(url);
   
@@ -96,35 +89,60 @@ async function processCSVFromURL(url, processingFunction) {
     
     const timeout = setTimeout(() => {
       reject(new Error('Download timeout'));
-    }, 600000); // 10 minute timeout for large files
+    }, 600000); // 10 minute timeout
     
-    https.get(validatedUrl, (response) => {
-      clearTimeout(timeout);
-      
-      console.log(`📡 Response status: ${response.statusCode}`);
-      console.log(`📡 Content-Type: ${response.headers['content-type']}`);
-      
-      if (response.statusCode !== 200) {
-        reject(new Error(`HTTP ${response.statusCode}`));
+    const makeRequest = (requestUrl, redirectCount = 0) => {
+      if (redirectCount > 10) {
+        clearTimeout(timeout);
+        reject(new Error('Too many redirects'));
         return;
       }
       
-      // Validate content type
-      const contentType = response.headers['content-type'];
-      if (contentType && contentType.includes('text/html')) {
-        reject(new Error('Received HTML instead of CSV - check Google Drive URL'));
-        return;
-      }
-      
-      processingFunction(response, resolve, reject);
-    }).on('error', (error) => {
-      clearTimeout(timeout);
-      reject(error);
-    });
+      https.get(requestUrl, (response) => {
+        console.log(`📡 Response status: ${response.statusCode}`);
+        console.log(`📡 Content-Type: ${response.headers['content-type']}`);
+        
+        // Handle redirects (301, 302, 303, 307, 308)
+        if ([301, 302, 303, 307, 308].includes(response.statusCode)) {
+          const location = response.headers.location;
+          if (location) {
+            console.log(`📡 Following redirect to: ${location.substring(0, 100)}...`);
+            makeRequest(location, redirectCount + 1);
+            return;
+          } else {
+            clearTimeout(timeout);
+            reject(new Error(`Redirect without location header`));
+            return;
+          }
+        }
+        
+        if (response.statusCode !== 200) {
+          clearTimeout(timeout);
+          reject(new Error(`HTTP ${response.statusCode}`));
+          return;
+        }
+        
+        // Check if we got HTML instead of CSV
+        const contentType = response.headers['content-type'];
+        if (contentType && contentType.includes('text/html')) {
+          clearTimeout(timeout);
+          reject(new Error('Received HTML instead of CSV - file may be too large for direct download'));
+          return;
+        }
+        
+        clearTimeout(timeout);
+        processingFunction(response, resolve, reject);
+      }).on('error', (error) => {
+        clearTimeout(timeout);
+        reject(error);
+      });
+    };
+    
+    makeRequest(validatedUrl);
   });
 }
 
-// Enhanced main data processing with validation
+// Enhanced main data processing
 async function processMainDataFile(url) {
   console.log('🌍 Processing main World Bank data file (WDICSV.csv)...');
   
@@ -147,7 +165,6 @@ async function processMainDataFile(url) {
           console.log(`📈 Processed ${rowCount} rows, found ${processedCount} valid data points, ${validationErrors} validation errors...`);
         }
         
-        // Validate and sanitize input
         const indicatorCode = validateIndicatorCode(row['Indicator Code']);
         const countryCode = validateCountryCode(row['Country Code']);
         const countryName = sanitizeString(row['Country Name'], 100);
@@ -190,7 +207,10 @@ async function processMainDataFile(url) {
         console.log(`   - Validation errors: ${validationErrors}`);
         resolve(results);
       })
-      .on('error', reject);
+      .on('error', (error) => {
+        console.error(`❌ CSV processing error: ${error.message}`);
+        reject(error);
+      });
   });
 }
 
@@ -319,7 +339,6 @@ async function createEnhancedTables() {
   const client = await pool.connect();
   
   try {
-    // Create indicator metadata table
     await client.query(`
       CREATE TABLE IF NOT EXISTS indicator_metadata (
         code VARCHAR(50) PRIMARY KEY,
@@ -335,7 +354,6 @@ async function createEnhancedTables() {
       )
     `);
     
-    // Create country-indicator availability table
     await client.query(`
       CREATE TABLE IF NOT EXISTS country_indicator_availability (
         id SERIAL PRIMARY KEY,
@@ -349,51 +367,10 @@ async function createEnhancedTables() {
       )
     `);
     
-    // Create indexes
     await client.query(`
       CREATE INDEX IF NOT EXISTS idx_indicator_metadata_industry ON indicator_metadata(industry);
       CREATE INDEX IF NOT EXISTS idx_availability_country_industry ON country_indicator_availability(country_code, industry);
       CREATE INDEX IF NOT EXISTS idx_indicator_metadata_code ON indicator_metadata(code);
-    `);
-    
-    // Create enhanced views
-    await client.query(`
-      CREATE OR REPLACE VIEW enhanced_indicator_summary AS
-      SELECT 
-        im.code,
-        im.name,
-        im.description,
-        im.unit,
-        im.source,
-        im.topic,
-        im.industry,
-        COUNT(DISTINCT i.country_code) as country_count,
-        MIN(i.year) as earliest_year,
-        MAX(i.year) as latest_year,
-        COUNT(*) as total_observations,
-        AVG(i.value) as avg_value,
-        MIN(i.value) as min_value,
-        MAX(i.value) as max_value
-      FROM indicator_metadata im
-      LEFT JOIN indicators i ON im.code = i.indicator_code
-      GROUP BY im.code, im.name, im.description, im.unit, im.source, im.topic, im.industry
-    `);
-    
-    await client.query(`
-      CREATE OR REPLACE VIEW country_data_availability AS
-      SELECT 
-        c.code,
-        c.name,
-        c.region,
-        c.income_group,
-        COUNT(DISTINCT i.indicator_code) as indicators_available,
-        COUNT(DISTINCT i.industry) as industries_covered,
-        MIN(i.year) as earliest_data,
-        MAX(i.year) as latest_data,
-        COUNT(*) as total_data_points
-      FROM countries c
-      LEFT JOIN indicators i ON c.code = i.country_code
-      GROUP BY c.code, c.name, c.region, c.income_group
     `);
     
     console.log('✅ Enhanced database tables and views created');
@@ -425,7 +402,6 @@ async function insertBatchData(data) {
     for (let i = 0; i < data.length; i += batchSize) {
       const batch = data.slice(i, i + batchSize);
       
-      // Use parameterized queries to prevent SQL injection
       const valueStrings = [];
       const values = [];
       let paramIndex = 1;
@@ -549,7 +525,7 @@ async function insertIndicatorMetadata(indicators) {
       }
     }
     
-    console.log(`✅ Inserted ${indicators.length} indicator metadata records`);
+    console.log(`✅ Inserted ${indicator.length} indicator metadata records`);
   } catch (error) {
     console.error('❌ Error inserting indicator metadata:', error);
     throw error;
@@ -644,14 +620,20 @@ async function processEnhancedWorldBankData(urls) {
     // Step 1: Create enhanced tables
     await createEnhancedTables();
     
-    // Step 2: Process all files in parallel for efficiency
-    console.log('📥 Starting parallel file processing...');
-    const [mainData, countries, indicators, availability] = await Promise.all([
-      processMainDataFile(mainDataUrl),
-      countryMetadataUrl ? processCountryMetadata(countryMetadataUrl) : Promise.resolve([]),
-      seriesMetadataUrl ? processIndicatorMetadata(seriesMetadataUrl) : Promise.resolve([]),
-      availabilityUrl ? processCountrySeriesAvailability(availabilityUrl) : Promise.resolve([])
-    ]);
+    // Step 2: Process files sequentially to avoid overwhelming Google Drive
+    console.log('📥 Starting sequential file processing...');
+    
+    const mainData = await processMainDataFile(mainDataUrl);
+    console.log('✅ Main data processing complete');
+    
+    const countries = countryMetadataUrl ? await processCountryMetadata(countryMetadataUrl) : [];
+    console.log('✅ Country metadata processing complete');
+    
+    const indicators = seriesMetadataUrl ? await processIndicatorMetadata(seriesMetadataUrl) : [];
+    console.log('✅ Indicator metadata processing complete');
+    
+    const availability = availabilityUrl ? await processCountrySeriesAvailability(availabilityUrl) : [];
+    console.log('✅ Availability data processing complete');
     
     // Step 3: Insert all data securely
     console.log('💾 Starting secure database insertion...');
@@ -661,46 +643,13 @@ async function processEnhancedWorldBankData(urls) {
     await insertCountryIndicatorAvailability(availability);
     await insertIndustryMappings();
     
-    // Step 4: Generate summary statistics
-    const client = await pool.connect();
-    try {
-      const stats = await client.query(`
-        SELECT 
-          COUNT(*) as total_indicators,
-          COUNT(DISTINCT country_code) as total_countries,
-          COUNT(DISTINCT indicator_code) as unique_indicators,
-          COUNT(DISTINCT industry) as industries_covered,
-          MIN(year) as earliest_year,
-          MAX(year) as latest_year
-        FROM indicators
-      `);
-      
-      const industryStats = await client.query(`
-        SELECT industry, COUNT(*) as data_points
-        FROM indicators 
-        WHERE industry IS NOT NULL
-        GROUP BY industry
-        ORDER BY data_points DESC
-      `);
-      
-      console.log('🎉 ENHANCED World Bank data processing complete!');
-      console.log(`📊 Final statistics:`);
-      console.log(`   - Total data points: ${stats.rows[0].total_indicators}`);
-      console.log(`   - Countries: ${stats.rows[0].total_countries}`);
-      console.log(`   - Unique indicators: ${stats.rows[0].unique_indicators}`);
-      console.log(`   - Industries covered: ${stats.rows[0].industries_covered}`);
-      console.log(`   - Time range: ${stats.rows[0].earliest_year} - ${stats.rows[0].latest_year}`);
-      console.log(`   - Indicator definitions: ${indicators.length}`);
-      console.log(`   - Availability records: ${availability.length}`);
-      
-      console.log(`📈 Industry breakdown:`);
-      industryStats.rows.forEach(row => {
-        console.log(`   - ${row.industry}: ${row.data_points} data points`);
-      });
-      
-    } finally {
-      client.release();
-    }
+    console.log('🎉 ENHANCED World Bank data processing complete!');
+    console.log(`📊 Final statistics:`);
+    console.log(`   - Total data points: ${mainData.length}`);
+    console.log(`   - Countries: ${countries.length}`);
+    console.log(`   - Indicator definitions: ${indicators.length}`);
+    console.log(`   - Availability records: ${availability.length}`);
+    console.log(`   - Industries: 6 (food, ict, infrastructure, biotech, medtech, mem)`);
     
   } catch (error) {
     console.error('❌ Enhanced processing failed:', error);
@@ -708,7 +657,7 @@ async function processEnhancedWorldBankData(urls) {
   }
 }
 
-// Command line argument parsing with validation
+// Command line argument parsing
 function parseArguments() {
   const args = process.argv.slice(2);
   const config = {};
@@ -724,7 +673,7 @@ function parseArguments() {
     process.exit(1);
   }
   
-  // Optional parameters with validation
+  // Optional parameters
   const countryIndex = args.indexOf('--country');
   if (countryIndex !== -1 && args[countryIndex + 1]) {
     try {
