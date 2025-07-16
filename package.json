@@ -49,12 +49,12 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/yourusername/industry-intelligence-db.git"
+    "url": "https://github.com/RicausZH/industry-intelligence-db.git"
   },
   "bugs": {
-    "url": "https://github.com/yourusername/industry-intelligence-db/issues"
+    "url": "https://github.com/RicausZH/industry-intelligence-db/issues"
   },
-  "homepage": "https://github.com/yourusername/industry-intelligence-db#readme",
+  "homepage": "https://github.com/RicausZH/industry-intelligence-db#readme",
   "config": {
     "unsafe-perm": true
   },
@@ -64,9 +64,5 @@
       "high": "error",
       "critical": "error"
     }
-  },
-  "funding": {
-    "type": "individual",
-    "url": "https://github.com/sponsors/yourusername"
   }
 }
