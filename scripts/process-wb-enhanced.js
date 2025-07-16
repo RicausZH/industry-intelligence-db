@@ -1,4 +1,5 @@
 const https = require('https');
+const http = require('http');
 const csv = require('csv-parser');
 const { Pool } = require('pg');
 const { INDUSTRY_INDICATORS } = require('./industry-config');
@@ -80,12 +81,12 @@ function getIndicatorIndustry(indicatorCode) {
   return 'general';
 }
 
-// Enhanced CSV processing with redirect handling
+// Enhanced Google Drive CSV processing with large file handling
 async function processCSVFromURL(url, processingFunction) {
   const validatedUrl = validateURL(url);
   
   return new Promise((resolve, reject) => {
-    console.log(`📡 Downloading from validated URL...`);
+    console.log(`📡 Attempting to download from Google Drive...`);
     
     const timeout = setTimeout(() => {
       reject(new Error('Download timeout'));
@@ -98,44 +99,87 @@ async function processCSVFromURL(url, processingFunction) {
         return;
       }
       
-      https.get(requestUrl, (response) => {
+      const urlObj = new URL(requestUrl);
+      const client = urlObj.protocol === 'https:' ? https : http;
+      
+      const options = {
+        hostname: urlObj.hostname,
+        port: urlObj.port,
+        path: urlObj.pathname + urlObj.search,
+        method: 'GET',
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+        }
+      };
+      
+      const req = client.request(options, (response) => {
         console.log(`📡 Response status: ${response.statusCode}`);
         console.log(`📡 Content-Type: ${response.headers['content-type']}`);
         
-        // Handle redirects (301, 302, 303, 307, 308)
+        // Handle redirects
         if ([301, 302, 303, 307, 308].includes(response.statusCode)) {
           const location = response.headers.location;
           if (location) {
-            console.log(`📡 Following redirect to: ${location.substring(0, 100)}...`);
+            console.log(`📡 Following redirect ${redirectCount + 1}/10...`);
             makeRequest(location, redirectCount + 1);
-            return;
-          } else {
-            clearTimeout(timeout);
-            reject(new Error(`Redirect without location header`));
             return;
           }
         }
         
-        if (response.statusCode !== 200) {
-          clearTimeout(timeout);
-          reject(new Error(`HTTP ${response.statusCode}`));
-          return;
+        if (response.statusCode === 200) {
+          const contentType = response.headers['content-type'] || '';
+          
+          // Check if we got HTML (Google Drive download page)
+          if (contentType.includes('text/html')) {
+            console.log(`📡 Received HTML page, attempting to extract download link...`);
+            
+            let htmlData = '';
+            response.on('data', chunk => {
+              htmlData += chunk.toString();
+            });
+            
+            response.on('end', () => {
+              // Try to find the direct download link in the HTML
+              const downloadLinkMatch = htmlData.match(/href="([^"]*uc\?export=download[^"]*)"/);
+              if (downloadLinkMatch) {
+                const downloadLink = downloadLinkMatch[1].replace(/&amp;/g, '&');
+                console.log(`📡 Found download link, retrying...`);
+                makeRequest(downloadLink, redirectCount + 1);
+                return;
+              }
+              
+              // Try alternative approach for large files
+              const fileId = validatedUrl.match(/id=([a-zA-Z0-9_-]+)/)[1];
+              const alternativeUrl = `https://drive.google.com/u/0/uc?id=${fileId}&export=download&confirm=t&uuid=${Date.now()}`;
+              console.log(`📡 Trying alternative download method...`);
+              makeRequest(alternativeUrl, redirectCount + 1);
+            });
+            return;
+          }
+          
+          // Check for CSV or binary content
+          if (contentType.includes('text/csv') || 
+              contentType.includes('application/octet-stream') || 
+              contentType.includes('application/binary') ||
+              contentType.includes('text/plain')) {
+            console.log(`📡 Received CSV data, processing...`);
+            clearTimeout(timeout);
+            processingFunction(response, resolve, reject);
+            return;
+          }
         }
         
-        // Check if we got HTML instead of CSV
-        const contentType = response.headers['content-type'];
-        if (contentType && contentType.includes('text/html')) {
-          clearTimeout(timeout);
-          reject(new Error('Received HTML instead of CSV - file may be too large for direct download'));
-          return;
-        }
-        
+        // If we get here, something went wrong
         clearTimeout(timeout);
-        processingFunction(response, resolve, reject);
-      }).on('error', (error) => {
+        reject(new Error(`Unexpected response: ${response.statusCode} ${response.headers['content-type']}`));
+      });
+      
+      req.on('error', (error) => {
         clearTimeout(timeout);
         reject(error);
       });
+      
+      req.end();
     };
     
     makeRequest(validatedUrl);
@@ -334,6 +378,7 @@ async function processCountrySeriesAvailability(url) {
   });
 }
 
+// [Keep all the database functions from the previous version]
 // Create enhanced database tables
 async function createEnhancedTables() {
   const client = await pool.connect();
@@ -448,6 +493,7 @@ async function insertBatchData(data) {
   }
 }
 
+// [Keep all other database functions: insertCountryMetadata, insertIndicatorMetadata, etc.]
 // Insert country metadata
 async function insertCountryMetadata(countries) {
   if (countries.length === 0) {
@@ -525,7 +571,7 @@ async function insertIndicatorMetadata(indicators) {
       }
     }
     
-    console.log(`✅ Inserted ${indicator.length} indicator metadata records`);
+    console.log(`✅ Inserted ${indicators.length} indicator metadata records`);
   } catch (error) {
     console.error('❌ Error inserting indicator metadata:', error);
     throw error;
@@ -616,11 +662,12 @@ async function processEnhancedWorldBankData(urls) {
     console.log('🚀 Starting ENHANCED World Bank data processing...');
     console.log('📊 Processing: Main data + Country metadata + Indicator metadata + Availability data');
     console.log('🔒 Security: Input validation, sanitization, and parameterized queries enabled');
+    console.log('🌐 Google Drive: Large file handling with HTML parsing enabled');
     
     // Step 1: Create enhanced tables
     await createEnhancedTables();
     
-    // Step 2: Process files sequentially to avoid overwhelming Google Drive
+    // Step 2: Process files sequentially
     console.log('📥 Starting sequential file processing...');
     
     const mainData = await processMainDataFile(mainDataUrl);
