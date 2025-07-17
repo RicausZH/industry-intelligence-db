@@ -69,6 +69,42 @@ const INDUSTRY_INDICATORS = {
       'NV.IND.TOTL.ZS',      // Industry value added
       'SL.IND.EMPL.ZS'       // Employment in industry
     ]
+  },
+
+  // NEW: Energy industry
+  'energy': {
+    'worldBank': [
+      'EG.ELC.ACCS.ZS',      // Access to electricity (% of population)
+      'EG.ELC.RNEW.ZS',      // Renewable electricity output (% of total)
+      'EG.ELC.COAL.ZS',      // Electricity from coal (% of total)
+      'EG.ELC.NGAS.ZS',      // Electricity from natural gas (% of total)
+      'EG.ELC.NUCL.ZS',      // Electricity from nuclear (% of total)
+      'EG.ELC.HYRO.ZS',      // Electricity from hydroelectric (% of total)
+      'EG.FEC.RNEW.ZS',      // Renewable energy consumption (% of total)
+      'EG.USE.PCAP.KG.OE',   // Energy use per capita (kg oil equivalent)
+      'EG.GDP.PUSE.KO.PP',   // GDP per unit of energy use
+      'EG.CFT.ACCS.ZS',      // Access to clean fuels for cooking
+      'EG.ELC.LOSS.ZS',      // Electric power transmission losses
+      'EG.IMP.CONS.ZS'       // Energy imports, net (% of energy use)
+    ]
+  },
+
+  // NEW: Climate industry
+  'climate': {
+    'worldBank': [
+      'EN.ATM.CO2E.PC',      // CO2 emissions (metric tons per capita)
+      'EN.ATM.CO2E.KT',      // CO2 emissions (kt)
+      'EN.ATM.METH.KT.CE',   // Methane emissions (kt of CO2 equivalent)
+      'EN.ATM.NOXE.KT.CE',   // Nitrous oxide emissions (kt of CO2 equivalent)
+      'EN.ATM.PM25.MC.M3',   // PM2.5 air pollution (micrograms per cubic meter)
+      'EN.CLC.MDAT.ZS',      // Droughts, floods, extreme temperatures (% of population)
+      'EN.POP.EL5M.ZS',      // Population in areas below 5m elevation (% of total)
+      'EN.POP.DNST',         // Population density (people per sq. km)
+      'EN.FSH.THRD.NO',      // Fish species, threatened
+      'EN.MAM.THRD.NO',      // Mammal species, threatened
+      'EN.BIR.THRD.NO',      // Bird species, threatened
+      'AG.LND.FRST.ZS'       // Forest area (% of land area)
+    ]
   }
 };
 
