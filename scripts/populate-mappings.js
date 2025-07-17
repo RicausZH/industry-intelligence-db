@@ -99,7 +99,7 @@ async function populateCountryMappings() {
   }
 }
 
-// Populate indicator mappings from existing industry config (FIXED VERSION)
+// Populate indicator mappings from existing industry config (FIXED VERSION - Shorter prefixes)
 async function populateIndicatorMappings() {
   const client = await pool.connect();
   
@@ -107,6 +107,22 @@ async function populateIndicatorMappings() {
     await client.query('DELETE FROM indicator_mappings');
     
     let mappingCount = 0;
+    
+    // Industry abbreviations to keep unified_concept shorter
+    const industryAbbrev = {
+      'food': 'FD',
+      'ict': 'ICT',
+      'infrastructure': 'INFR',
+      'biotech': 'BIO',
+      'medtech': 'MED',
+      'mem': 'MEM',
+      'energy': 'ENR',
+      'climate': 'CLM',
+      'context': 'CTX',
+      'innovation': 'INN',
+      'finance': 'FIN',
+      'trade': 'TRD'
+    };
     
     for (const [industry, sources] of Object.entries(INDUSTRY_INDICATORS)) {
       for (const [source, indicators] of Object.entries(sources)) {
@@ -120,8 +136,21 @@ async function populateIndicatorMappings() {
             const baseIndicatorName = metadataResult.rows[0]?.name || indicator;
             const description = metadataResult.rows[0]?.description || `${industry} indicator`;
             
-            // Create industry-specific unified concept name to avoid duplicates
-            const unifiedConcept = `${industry.toUpperCase()}_${baseIndicatorName}`;
+            // Create shorter industry-specific unified concept name
+            const industryPrefix = industryAbbrev[industry] || industry.toUpperCase().substring(0, 3);
+            
+            // Truncate the indicator name if it's too long
+            const maxNameLength = 200; // Leave room for prefix
+            const truncatedName = baseIndicatorName.length > maxNameLength 
+              ? baseIndicatorName.substring(0, maxNameLength) + '...'
+              : baseIndicatorName;
+            
+            const unifiedConcept = `${industryPrefix}_${truncatedName}`;
+            
+            // Ensure the final unified concept is under 255 characters
+            const finalUnifiedConcept = unifiedConcept.length > 250 
+              ? unifiedConcept.substring(0, 250) + '...'
+              : unifiedConcept;
             
             await client.query(`
               INSERT INTO indicator_mappings (unified_concept, concept_description, wb_code, oecd_code, imf_code, priority_source, industry)
@@ -130,7 +159,7 @@ async function populateIndicatorMappings() {
                 unified_concept = EXCLUDED.unified_concept,
                 concept_description = EXCLUDED.concept_description,
                 priority_source = EXCLUDED.priority_source
-            `, [unifiedConcept, description, indicator, null, null, 'WB', industry]);
+            `, [finalUnifiedConcept, description, indicator, null, null, 'WB', industry]);
             
             mappingCount++;
           }
@@ -143,7 +172,7 @@ async function populateIndicatorMappings() {
     // Show some examples
     const exampleResult = await client.query(`
       SELECT industry, COUNT(*) as indicator_count, 
-             array_agg(unified_concept ORDER BY unified_concept LIMIT 3) as examples
+             array_agg(unified_concept ORDER BY unified_concept LIMIT 2) as examples
       FROM indicator_mappings 
       GROUP BY industry 
       ORDER BY industry
