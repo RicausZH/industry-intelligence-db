@@ -99,7 +99,7 @@ async function populateCountryMappings() {
   }
 }
 
-// Populate indicator mappings from existing industry config (FIXED VERSION - Shorter prefixes)
+// Populate indicator mappings from existing industry config (FIXED VERSION - No LIMIT in array_agg)
 async function populateIndicatorMappings() {
   const client = await pool.connect();
   
@@ -169,10 +169,10 @@ async function populateIndicatorMappings() {
     
     console.log(`✅ Populated ${mappingCount} indicator mappings across ${Object.keys(INDUSTRY_INDICATORS).length} industries`);
     
-    // Show some examples
+    // Show some examples (FIXED VERSION)
     const exampleResult = await client.query(`
       SELECT industry, COUNT(*) as indicator_count, 
-             array_agg(unified_concept ORDER BY unified_concept LIMIT 2) as examples
+             array_agg(unified_concept ORDER BY unified_concept) as all_examples
       FROM indicator_mappings 
       GROUP BY industry 
       ORDER BY industry
@@ -180,8 +180,10 @@ async function populateIndicatorMappings() {
     
     console.log('\n📊 Indicator mappings by industry:');
     exampleResult.rows.forEach(row => {
+      // Take only first 2 examples in JavaScript instead of SQL
+      const examples = row.all_examples.slice(0, 2);
       console.log(`   ${row.industry}: ${row.indicator_count} indicators`);
-      console.log(`      Examples: ${row.examples.join(', ')}`);
+      console.log(`      Examples: ${examples.join(', ')}`);
     });
     
   } catch (error) {
