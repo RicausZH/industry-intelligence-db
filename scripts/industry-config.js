@@ -105,7 +105,6 @@ const INDUSTRY_INDICATORS = {
     ]
   },
 
-  // NEW: Cross-Industry Context for AI Reports
   'context': {
     'worldBank': [
       // Economic Foundation
@@ -140,6 +139,60 @@ const INDUSTRY_INDICATORS = {
       'SP.URB.TOTL.IN.ZS',   // Urban population (% of total)
       'SP.POP.GROW',         // Population growth (annual %)
       'SP.POP.65UP.TO.ZS'    // Population ages 65 and above (% of total)
+    ]
+  },
+
+  // NEW: Innovation Industry
+  'innovation': {
+    'worldBank': [
+      'GB.XPD.RSDV.GD.ZS',   // Research and development expenditure (% of GDP)
+      'IP.PAT.RESD',         // Patent applications, residents
+      'IP.PAT.NRES',         // Patent applications, nonresidents
+      'IP.TMK.RESD',         // Trademark applications, residents
+      'IP.TMK.NRES',         // Trademark applications, nonresidents
+      'IP.IDS.RSCT',         // Industrial design applications, resident
+      'IP.IDS.NRCT',         // Industrial design applications, nonresident
+      'IP.JRN.ARTC.SC',      // Scientific and technical journal articles
+      'TX.VAL.TECH.MF.ZS',   // High-technology exports (% of manufactured exports)
+      'SP.POP.SCIE.RD.P6',   // Researchers in R&D (per million people)
+      'BX.GSR.ROYL.CD',      // Charges for use of intellectual property, receipts
+      'BM.GSR.ROYL.CD'       // Charges for use of intellectual property, payments
+    ]
+  },
+
+  // NEW: Finance Industry
+  'finance': {
+    'worldBank': [
+      'FS.AST.DOMS.GD.ZS',   // Domestic credit provided by financial sector (% of GDP)
+      'FS.AST.PRVT.GD.ZS',   // Domestic credit to private sector (% of GDP)
+      'FD.AST.PRVT.GD.ZS',   // Domestic credit to private sector by banks (% of GDP)
+      'FR.INR.LEND',         // Lending interest rate (%)
+      'FR.INR.DPST',         // Deposit interest rate (%)
+      'FR.INR.RINR',         // Real interest rate (%)
+      'BX.KLT.DINV.WD.GD.ZS', // Foreign direct investment, net inflows (% of GDP)
+      'BX.PEF.TOTL.CD.WD',   // Portfolio equity, net inflows (BoP, current US$)
+      'CM.MKT.LCAP.GD.ZS',   // Market capitalization of listed companies (% of GDP)
+      'CM.MKT.TRAD.GD.ZS',   // Stocks traded, total value (% of GDP)
+      'GFDD.DI.14',          // Bank capital to assets ratio (%)
+      'GFDD.SI.01'           // Stock market capitalization to GDP (%)
+    ]
+  },
+
+  // NEW: Trade Industry
+  'trade': {
+    'worldBank': [
+      'NE.EXP.GNFS.ZS',      // Exports of goods and services (% of GDP)
+      'NE.IMP.GNFS.ZS',      // Imports of goods and services (% of GDP)
+      'NE.TRD.GNFS.ZS',      // Trade (% of GDP)
+      'BX.GSR.GNFS.CD',      // Exports of goods and services (current US$)
+      'BM.GSR.GNFS.CD',      // Imports of goods and services (current US$)
+      'BN.CAB.XOKA.GD.ZS',   // Current account balance (% of GDP)
+      'TX.VAL.MANF.ZS.UN',   // Manufactures exports (% of merchandise exports)
+      'TM.VAL.MANF.ZS.UN',   // Manufactures imports (% of merchandise imports)
+      'TX.VAL.FUEL.ZS.UN',   // Fuel exports (% of merchandise exports)
+      'TM.VAL.FUEL.ZS.UN',   // Fuel imports (% of merchandise imports)
+      'TX.VAL.MMTL.ZS.UN',   // Ores and metals exports (% of merchandise exports)
+      'TM.VAL.MMTL.ZS.UN'    // Ores and metals imports (% of merchandise imports)
     ]
   }
 };
