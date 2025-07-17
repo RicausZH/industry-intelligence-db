@@ -71,7 +71,6 @@ const INDUSTRY_INDICATORS = {
     ]
   },
 
-  // NEW: Energy industry
   'energy': {
     'worldBank': [
       'EG.ELC.ACCS.ZS',      // Access to electricity (% of population)
@@ -89,7 +88,6 @@ const INDUSTRY_INDICATORS = {
     ]
   },
 
-  // NEW: Climate industry
   'climate': {
     'worldBank': [
       'EN.ATM.CO2E.PC',      // CO2 emissions (metric tons per capita)
@@ -104,6 +102,44 @@ const INDUSTRY_INDICATORS = {
       'EN.MAM.THRD.NO',      // Mammal species, threatened
       'EN.BIR.THRD.NO',      // Bird species, threatened
       'AG.LND.FRST.ZS'       // Forest area (% of land area)
+    ]
+  },
+
+  // NEW: Cross-Industry Context for AI Reports
+  'context': {
+    'worldBank': [
+      // Economic Foundation
+      'NY.GDP.MKTP.KD.ZG',   // GDP growth (annual %)
+      'NY.GDP.PCAP.KD',      // GDP per capita (constant 2015 US$)
+      'NY.GDP.PCAP.PP.KD',   // GDP per capita, PPP (constant 2017 international $)
+      'FP.CPI.TOTL.ZG',      // Inflation, consumer prices (annual %)
+      'NE.TRD.GNFS.ZS',      // Trade (% of GDP)
+      
+      // Human Capital Foundation
+      'SE.TER.ENRR',         // School enrollment, tertiary (% gross)
+      'SE.TER.ENRR.FE',      // Tertiary enrollment, female (% gross)
+      'SE.TER.ENRR.MA',      // Tertiary enrollment, male (% gross)
+      'SE.ADT.LITR.ZS',      // Literacy rate, adult total (% of people ages 15+)
+      'SL.UEM.TOTL.ZS',      // Unemployment, total (% of total labor force)
+      
+      // Business Environment
+      'IC.BUS.EASE.XQ',      // Ease of doing business rank
+      'IC.REG.DURS',         // Time required to start a business (days)
+      'IC.REG.COST.PC.ZS',   // Cost of business start-up procedures (% of GNI per capita)
+      'IC.TAX.TOTL.CP.ZS',   // Total tax and contribution rate (% of profit)
+      
+      // Institutional Quality
+      'IQ.CPA.PROP.XQ',      // CPIA property rights and rule-based governance rating
+      'IQ.CPA.TRAN.XQ',      // CPIA transparency, accountability, and corruption rating
+      'IQ.CPA.FINS.XQ',      // CPIA financial sector rating
+      'IQ.CPA.DEBT.XQ',      // CPIA debt policy rating
+      
+      // Social Development
+      'SI.POV.DDAY',         // Poverty headcount ratio at $2.15 a day (2017 PPP)
+      'SI.POV.GINI',         // Gini index
+      'SP.URB.TOTL.IN.ZS',   // Urban population (% of total)
+      'SP.POP.GROW',         // Population growth (annual %)
+      'SP.POP.65UP.TO.ZS'    // Population ages 65 and above (% of total)
     ]
   }
 };
