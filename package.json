@@ -1,38 +1,25 @@
 {
   "name": "industry-intelligence-db",
   "version": "1.0.0",
-  "description": "Database service for multi-industry intelligence with enhanced processing and file upload capabilities",
-  "main": "setup-db.js",
+  "description": "Database service for multi-industry intelligence with enhanced data processing capabilities",
+  "main": "scripts/setup-db.js",
   "scripts": {
+    "start": "node scripts/setup-db.js",
     "setup": "node scripts/setup-db.js",
-    "process-wb": "node scripts/process-wb-data.js",
-    "process-wb-complete": "node scripts/process-wb-complete.js",
-    "process-wb-enhanced": "node scripts/process-wb-enhanced.js",
-    "process-wb-production": "node scripts/process-wb-api.js",
-    "process-wb-simple": "node scripts/process-wb-simple.js",
-    "process-wb-secure": "node scripts/process-wb-secure.js",
-    "download": "node scripts/download-data.js",
     "setup-db": "node scripts/setup-db.js",
+    "process-wb-enhanced": "node scripts/process-wb-enhanced.js",
+    "download": "node scripts/download-data.js",
+    "verify-db": "node scripts/verify-database.js",
     "test": "echo \"Error: no test specified\" && exit 1",
     "lint": "echo \"No linting configured\" && exit 0",
-    "security-audit": "npm audit --audit-level moderate",
-    "db-migrate": "node scripts/setup-db.js",
-    "db-seed": "node scripts/process-wb-enhanced.js",
-    "verify-db": "node scripts/verify-database.js"
+    "security-audit": "npm audit --audit-level moderate"
   },
   "dependencies": {
     "pg": "^8.11.0",
     "csv-parser": "^3.0.0",
     "axios": "^1.6.0",
     "fs-extra": "^11.1.1",
-    "dotenv": "^16.3.1",
-    "express": "^4.18.2",
-    "multer": "^1.4.5-lts.1",
-    "cors": "^2.8.5",
-    "helmet": "^7.1.0",
-    "express-rate-limit": "^7.1.5",
-    "mime-types": "^2.1.35",
-    "uuid": "^9.0.1"
+    "dotenv": "^16.3.1"
   },
   "devDependencies": {
     "nodemon": "^3.0.1"
@@ -46,16 +33,11 @@
     "economic-data",
     "industry-intelligence",
     "database",
-    "api",
     "postgresql",
     "data-processing",
     "csv",
     "n8n",
-    "automation",
-    "enhanced",
-    "file-upload",
-    "express",
-    "multer"
+    "automation"
   ],
   "author": "Eric Markowski",
   "license": "MIT",
@@ -66,15 +48,5 @@
   "bugs": {
     "url": "https://github.com/RicausZH/industry-intelligence-db/issues"
   },
-  "homepage": "https://github.com/RicausZH/industry-intelligence-db#readme",
-  "config": {
-    "unsafe-perm": true
-  },
-  "security": {
-    "advisories": {
-      "moderate": "warn",
-      "high": "error",
-      "critical": "error"
-    }
-  }
+  "homepage": "https://github.com/RicausZH/industry-intelligence-db#readme"
 }
