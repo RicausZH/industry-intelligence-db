@@ -12,15 +12,20 @@ const pool = new Pool({
   connectionTimeoutMillis: 2000,
 });
 
-// Input validation functions
+// UPDATED: Input validation functions with flexible URL support
 function validateURL(url) {
   if (!url || typeof url !== 'string') {
     throw new Error('Invalid URL provided');
   }
-  const urlPattern = /^https:\/\/drive\.google\.com\/uc\?export=download&id=[a-zA-Z0-9_-]+$/;
-  if (!urlPattern.test(url)) {
-    throw new Error('Invalid Google Drive URL format');
+  
+  // Support both Google Drive URLs and Railway file upload URLs
+  const googleDrivePattern = /^https:\/\/drive\.google\.com\/uc\?export=download&id=[a-zA-Z0-9_-]+$/;
+  const railwayPattern = /^https:\/\/railway-file-upload-production-\d+\.up\.railway\.app\/download\/[a-zA-Z0-9_-]+\.csv$/;
+  
+  if (!googleDrivePattern.test(url) && !railwayPattern.test(url)) {
+    throw new Error('Invalid URL format - must be Google Drive or Railway file upload URL');
   }
+  
   return url;
 }
 
@@ -81,12 +86,12 @@ function getIndicatorIndustry(indicatorCode) {
   return 'general';
 }
 
-// Enhanced Google Drive CSV processing with large file handling
+// UPDATED: Enhanced CSV processing with Railway URL support
 async function processCSVFromURL(url, processingFunction) {
   const validatedUrl = validateURL(url);
   
   return new Promise((resolve, reject) => {
-    console.log(`📡 Attempting to download from Google Drive...`);
+    console.log(`🚀 Attempting to download from: ${validatedUrl}`);
     
     const timeout = setTimeout(() => {
       reject(new Error('Download timeout'));
@@ -113,14 +118,14 @@ async function processCSVFromURL(url, processingFunction) {
       };
       
       const req = client.request(options, (response) => {
-        console.log(`📡 Response status: ${response.statusCode}`);
-        console.log(`📡 Content-Type: ${response.headers['content-type']}`);
+        console.log(`🔄 Response status: ${response.statusCode}`);
+        console.log(`📄 Content-Type: ${response.headers['content-type']}`);
         
         // Handle redirects
         if ([301, 302, 303, 307, 308].includes(response.statusCode)) {
           const location = response.headers.location;
           if (location) {
-            console.log(`📡 Following redirect ${redirectCount + 1}/10...`);
+            console.log(`↪️ Following redirect ${redirectCount + 1}/10...`);
             makeRequest(location, redirectCount + 1);
             return;
           }
@@ -131,7 +136,7 @@ async function processCSVFromURL(url, processingFunction) {
           
           // Check if we got HTML (Google Drive download page)
           if (contentType.includes('text/html')) {
-            console.log(`📡 Received HTML page, attempting to extract download link...`);
+            console.log(`🌐 Received HTML page, attempting to extract download link...`);
             
             let htmlData = '';
             response.on('data', chunk => {
@@ -143,16 +148,24 @@ async function processCSVFromURL(url, processingFunction) {
               const downloadLinkMatch = htmlData.match(/href="([^"]*uc\?export=download[^"]*)"/);
               if (downloadLinkMatch) {
                 const downloadLink = downloadLinkMatch[1].replace(/&amp;/g, '&');
-                console.log(`📡 Found download link, retrying...`);
+                console.log(`🔗 Found download link, retrying...`);
                 makeRequest(downloadLink, redirectCount + 1);
                 return;
               }
               
               // Try alternative approach for large files
-              const fileId = validatedUrl.match(/id=([a-zA-Z0-9_-]+)/)[1];
-              const alternativeUrl = `https://drive.google.com/u/0/uc?id=${fileId}&export=download&confirm=t&uuid=${Date.now()}`;
-              console.log(`📡 Trying alternative download method...`);
-              makeRequest(alternativeUrl, redirectCount + 1);
+              const fileIdMatch = validatedUrl.match(/id=([a-zA-Z0-9_-]+)/);
+              if (fileIdMatch) {
+                const fileId = fileIdMatch[1];
+                const alternativeUrl = `https://drive.google.com/u/0/uc?id=${fileId}&export=download&confirm=t&uuid=${Date.now()}`;
+                console.log(`🔄 Trying alternative download method...`);
+                makeRequest(alternativeUrl, redirectCount + 1);
+                return;
+              }
+              
+              // If it's a Railway URL, this shouldn't happen - reject
+              clearTimeout(timeout);
+              reject(new Error('Unexpected HTML response from Railway URL'));
             });
             return;
           }
@@ -161,8 +174,9 @@ async function processCSVFromURL(url, processingFunction) {
           if (contentType.includes('text/csv') || 
               contentType.includes('application/octet-stream') || 
               contentType.includes('application/binary') ||
-              contentType.includes('text/plain')) {
-            console.log(`📡 Received CSV data, processing...`);
+              contentType.includes('text/plain') ||
+              contentType.includes('application/x-download')) {
+            console.log(`📊 Received CSV data, processing...`);
             clearTimeout(timeout);
             processingFunction(response, resolve, reject);
             return;
@@ -188,11 +202,11 @@ async function processCSVFromURL(url, processingFunction) {
 
 // Enhanced main data processing
 async function processMainDataFile(url) {
-  console.log('🌍 Processing main World Bank data file (WDICSV.csv)...');
+  console.log('🔄 Processing main World Bank data file (WDICSV.csv)...');
   
   const targetIndicators = getAllIndicators();
-  console.log(`📊 Target indicators: ${targetIndicators.length} across 6 industries`);
-  console.log('🎯 Industries: food, ict, infrastructure, biotech, medtech, mem');
+  console.log(`🎯 Target indicators: ${targetIndicators.length} across 6 industries`);
+  console.log('🏭 Industries: food, ict, infrastructure, biotech, medtech, mem');
   
   return processCSVFromURL(url, (response, resolve, reject) => {
     const results = [];
@@ -206,7 +220,7 @@ async function processMainDataFile(url) {
       .on('data', (row) => {
         rowCount++;
         if (rowCount % 50000 === 0) {
-          console.log(`📈 Processed ${rowCount} rows, found ${processedCount} valid data points, ${validationErrors} validation errors...`);
+          console.log(`📊 Processed ${rowCount} rows, found ${processedCount} valid data points, ${validationErrors} validation errors...`);
         }
         
         const indicatorCode = validateIndicatorCode(row['Indicator Code']);
@@ -244,7 +258,7 @@ async function processMainDataFile(url) {
         }
       })
       .on('end', () => {
-        console.log(`📊 Enhanced main data processing complete!`);
+        console.log(`✅ Enhanced main data processing complete!`);
         console.log(`   - Total CSV rows processed: ${rowCount}`);
         console.log(`   - Target indicator rows found: ${relevantRows}`);
         console.log(`   - Valid data points extracted: ${processedCount}`);
@@ -260,7 +274,7 @@ async function processMainDataFile(url) {
 
 // Enhanced country metadata processing
 async function processCountryMetadata(url) {
-  console.log('🌐 Processing country metadata (WDICountry.csv)...');
+  console.log('🌍 Processing country metadata (WDICountry.csv)...');
   
   return processCSVFromURL(url, (response, resolve, reject) => {
     const countries = [];
@@ -291,7 +305,7 @@ async function processCountryMetadata(url) {
         }
       })
       .on('end', () => {
-        console.log(`🌐 Processed ${countries.length} countries from ${rowCount} rows`);
+        console.log(`🌍 Processed ${countries.length} countries from ${rowCount} rows`);
         console.log(`   - Validation errors: ${validationErrors}`);
         resolve(countries);
       })
@@ -342,7 +356,7 @@ async function processIndicatorMetadata(url) {
 
 // Enhanced availability processing
 async function processCountrySeriesAvailability(url) {
-  console.log('🔗 Processing country-series availability (WDICountry-series.csv)...');
+  console.log('📊 Processing country-series availability (WDICountry-series.csv)...');
   
   return processCSVFromURL(url, (response, resolve, reject) => {
     const availability = [];
@@ -370,7 +384,7 @@ async function processCountrySeriesAvailability(url) {
         }
       })
       .on('end', () => {
-        console.log(`🔗 Processed ${availability.length} availability records from ${rowCount} rows`);
+        console.log(`📊 Processed ${availability.length} availability records from ${rowCount} rows`);
         console.log(`   - Relevant records found: ${relevantRows}`);
         resolve(availability);
       })
@@ -378,7 +392,6 @@ async function processCountrySeriesAvailability(url) {
   });
 }
 
-// [Keep all the database functions from the previous version]
 // Create enhanced database tables
 async function createEnhancedTables() {
   const client = await pool.connect();
@@ -439,7 +452,7 @@ async function insertBatchData(data) {
   try {
     await client.query('BEGIN');
     await client.query('DELETE FROM indicators WHERE source = $1', ['WB']);
-    console.log('🧹 Cleared existing World Bank data');
+    console.log('🗑️ Cleared existing World Bank data');
     
     const batchSize = 1000;
     const totalBatches = Math.ceil(data.length / batchSize);
@@ -493,7 +506,6 @@ async function insertBatchData(data) {
   }
 }
 
-// [Keep all other database functions: insertCountryMetadata, insertIndicatorMetadata, etc.]
 // Insert country metadata
 async function insertCountryMetadata(countries) {
   if (countries.length === 0) {
@@ -505,7 +517,7 @@ async function insertCountryMetadata(countries) {
   
   try {
     await client.query('DELETE FROM countries');
-    console.log('🧹 Cleared existing country metadata');
+    console.log('🗑️ Cleared existing country metadata');
     
     for (const country of countries) {
       if (country.code && country.name) {
@@ -542,7 +554,7 @@ async function insertIndicatorMetadata(indicators) {
   
   try {
     await client.query('DELETE FROM indicator_metadata');
-    console.log('🧹 Cleared existing indicator metadata');
+    console.log('🗑️ Cleared existing indicator metadata');
     
     for (const indicator of indicators) {
       if (indicator.code && indicator.name) {
@@ -591,7 +603,7 @@ async function insertCountryIndicatorAvailability(availability) {
   
   try {
     await client.query('DELETE FROM country_indicator_availability');
-    console.log('🧹 Cleared existing availability data');
+    console.log('🗑️ Cleared existing availability data');
     
     for (const record of availability) {
       if (record.country_code && record.indicator_code) {
@@ -625,7 +637,7 @@ async function insertIndustryMappings() {
   
   try {
     await client.query('DELETE FROM industry_indicators');
-    console.log('🧹 Cleared existing industry mappings');
+    console.log('🗑️ Cleared existing industry mappings');
     
     let mappingCount = 0;
     for (const [industry, sources] of Object.entries(INDUSTRY_INDICATORS)) {
@@ -662,13 +674,13 @@ async function processEnhancedWorldBankData(urls) {
     console.log('🚀 Starting ENHANCED World Bank data processing...');
     console.log('📊 Processing: Main data + Country metadata + Indicator metadata + Availability data');
     console.log('🔒 Security: Input validation, sanitization, and parameterized queries enabled');
-    console.log('🌐 Google Drive: Large file handling with HTML parsing enabled');
+    console.log('🌐 URLs: Support for both Google Drive and Railway file upload URLs');
     
     // Step 1: Create enhanced tables
     await createEnhancedTables();
     
     // Step 2: Process files sequentially
-    console.log('📥 Starting sequential file processing...');
+    console.log('⏳ Starting sequential file processing...');
     
     const mainData = await processMainDataFile(mainDataUrl);
     console.log('✅ Main data processing complete');
@@ -704,7 +716,7 @@ async function processEnhancedWorldBankData(urls) {
   }
 }
 
-// Command line argument parsing
+// UPDATED: Command line argument parsing with flexible URL validation
 function parseArguments() {
   const args = process.argv.slice(2);
   const config = {};
