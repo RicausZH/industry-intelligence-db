@@ -12,15 +12,15 @@ const pool = new Pool({
   connectionTimeoutMillis: 2000,
 });
 
-// UPDATED: Input validation functions with flexible URL support
+// UPDATED: Input validation functions with flexible URL support (including timestamps)
 function validateURL(url) {
   if (!url || typeof url !== 'string') {
     throw new Error('Invalid URL provided');
   }
   
-  // Support both Google Drive URLs and Railway file upload URLs
+  // Support both Google Drive URLs and Railway file upload URLs (with timestamps)
   const googleDrivePattern = /^https:\/\/drive\.google\.com\/uc\?export=download&id=[a-zA-Z0-9_-]+$/;
-  const railwayPattern = /^https:\/\/railway-file-upload-production-\d+\.up\.railway\.app\/download\/[a-zA-Z0-9_-]+\.csv$/;
+  const railwayPattern = /^https:\/\/railway-file-upload-production-\d+\.up\.railway\.app\/download\/\d+-[a-zA-Z0-9_-]+\.csv$/;
   
   if (!googleDrivePattern.test(url) && !railwayPattern.test(url)) {
     throw new Error('Invalid URL format - must be Google Drive or Railway file upload URL');
@@ -86,7 +86,7 @@ function getIndicatorIndustry(indicatorCode) {
   return 'general';
 }
 
-// UPDATED: Enhanced CSV processing with Railway URL support
+// Enhanced CSV processing with Railway URL support
 async function processCSVFromURL(url, processingFunction) {
   const validatedUrl = validateURL(url);
   
@@ -175,7 +175,8 @@ async function processCSVFromURL(url, processingFunction) {
               contentType.includes('application/octet-stream') || 
               contentType.includes('application/binary') ||
               contentType.includes('text/plain') ||
-              contentType.includes('application/x-download')) {
+              contentType.includes('application/x-download') ||
+              contentType.includes('charset=UTF-8')) {
             console.log(`📊 Received CSV data, processing...`);
             clearTimeout(timeout);
             processingFunction(response, resolve, reject);
@@ -205,8 +206,8 @@ async function processMainDataFile(url) {
   console.log('🔄 Processing main World Bank data file (WDICSV.csv)...');
   
   const targetIndicators = getAllIndicators();
-  console.log(`🎯 Target indicators: ${targetIndicators.length} across 6 industries`);
-  console.log('🏭 Industries: food, ict, infrastructure, biotech, medtech, mem');
+  console.log(`🎯 Target indicators: ${targetIndicators.length} across ${Object.keys(INDUSTRY_INDICATORS).length} industries`);
+  console.log(`🏭 Industries: ${Object.keys(INDUSTRY_INDICATORS).join(', ')}`);
   
   return processCSVFromURL(url, (response, resolve, reject) => {
     const results = [];
@@ -674,7 +675,7 @@ async function processEnhancedWorldBankData(urls) {
     console.log('🚀 Starting ENHANCED World Bank data processing...');
     console.log('📊 Processing: Main data + Country metadata + Indicator metadata + Availability data');
     console.log('🔒 Security: Input validation, sanitization, and parameterized queries enabled');
-    console.log('🌐 URLs: Support for both Google Drive and Railway file upload URLs');
+    console.log('🌐 URLs: Support for both Google Drive and Railway file upload URLs (with timestamps)');
     
     // Step 1: Create enhanced tables
     await createEnhancedTables();
@@ -708,7 +709,7 @@ async function processEnhancedWorldBankData(urls) {
     console.log(`   - Countries: ${countries.length}`);
     console.log(`   - Indicator definitions: ${indicators.length}`);
     console.log(`   - Availability records: ${availability.length}`);
-    console.log(`   - Industries: 6 (food, ict, infrastructure, biotech, medtech, mem)`);
+    console.log(`   - Industries: ${Object.keys(INDUSTRY_INDICATORS).length} (${Object.keys(INDUSTRY_INDICATORS).join(', ')})`);
     
   } catch (error) {
     console.error('❌ Enhanced processing failed:', error);
@@ -716,7 +717,7 @@ async function processEnhancedWorldBankData(urls) {
   }
 }
 
-// UPDATED: Command line argument parsing with flexible URL validation
+// Command line argument parsing with flexible URL validation
 function parseArguments() {
   const args = process.argv.slice(2);
   const config = {};
