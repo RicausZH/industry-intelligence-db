@@ -2,17 +2,14 @@
   "name": "industry-intelligence-db",
   "version": "1.0.0",
   "description": "Database service for multi-industry intelligence with enhanced data processing capabilities",
-  "main": "scripts/setup-db.js",
+  "main": "server.js",
   "scripts": {
-    "start": "node scripts/setup-db.js",
+    "start": "node server.js",
     "setup": "node scripts/setup-db.js",
     "setup-db": "node scripts/setup-db.js",
     "process-wb-enhanced": "node scripts/process-wb-enhanced.js",
     "download": "node scripts/download-data.js",
-    "verify-db": "node scripts/verify-database.js",
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "lint": "echo \"No linting configured\" && exit 0",
-    "security-audit": "npm audit --audit-level moderate"
+    "verify-db": "node scripts/verify-database.js"
   },
   "dependencies": {
     "pg": "^8.11.0",
