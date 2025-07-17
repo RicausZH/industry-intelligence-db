@@ -99,7 +99,7 @@ async function populateCountryMappings() {
   }
 }
 
-// Populate indicator mappings from existing industry config
+// Populate indicator mappings from existing industry config (FIXED VERSION)
 async function populateIndicatorMappings() {
   const client = await pool.connect();
   
@@ -117,13 +117,20 @@ async function populateIndicatorMappings() {
               SELECT name, description FROM indicator_metadata WHERE code = $1
             `, [indicator]);
             
-            const indicatorName = metadataResult.rows[0]?.name || `${industry.toUpperCase()}_${indicator}`;
+            const baseIndicatorName = metadataResult.rows[0]?.name || indicator;
             const description = metadataResult.rows[0]?.description || `${industry} indicator`;
+            
+            // Create industry-specific unified concept name to avoid duplicates
+            const unifiedConcept = `${industry.toUpperCase()}_${baseIndicatorName}`;
             
             await client.query(`
               INSERT INTO indicator_mappings (unified_concept, concept_description, wb_code, oecd_code, imf_code, priority_source, industry)
               VALUES ($1, $2, $3, $4, $5, $6, $7)
-            `, [indicatorName, description, indicator, null, null, 'WB', industry]);
+              ON CONFLICT (wb_code, industry) DO UPDATE SET
+                unified_concept = EXCLUDED.unified_concept,
+                concept_description = EXCLUDED.concept_description,
+                priority_source = EXCLUDED.priority_source
+            `, [unifiedConcept, description, indicator, null, null, 'WB', industry]);
             
             mappingCount++;
           }
@@ -132,6 +139,22 @@ async function populateIndicatorMappings() {
     }
     
     console.log(`✅ Populated ${mappingCount} indicator mappings across ${Object.keys(INDUSTRY_INDICATORS).length} industries`);
+    
+    // Show some examples
+    const exampleResult = await client.query(`
+      SELECT industry, COUNT(*) as indicator_count, 
+             array_agg(unified_concept ORDER BY unified_concept LIMIT 3) as examples
+      FROM indicator_mappings 
+      GROUP BY industry 
+      ORDER BY industry
+    `);
+    
+    console.log('\n📊 Indicator mappings by industry:');
+    exampleResult.rows.forEach(row => {
+      console.log(`   ${row.industry}: ${row.indicator_count} indicators`);
+      console.log(`      Examples: ${row.examples.join(', ')}`);
+    });
+    
   } catch (error) {
     console.error('❌ Error populating indicator mappings:', error);
     throw error;
@@ -170,9 +193,13 @@ async function analyzeDataCoverage() {
     const yearResult = await client.query('SELECT MIN(year) as min_year, MAX(year) as max_year FROM indicators');
     console.log(`   Year range: ${yearResult.rows[0].min_year} - ${yearResult.rows[0].max_year}`);
     
+    // Show multi-source table status
+    const mappingCountResult = await client.query('SELECT COUNT(*) as mapping_count FROM indicator_mappings');
+    const countryMappingResult = await client.query('SELECT COUNT(*) as country_mappings FROM country_mappings');
+    
     console.log('\n🎯 MULTI-SOURCE READINESS:');
-    console.log('   ✅ Country mappings: Ready for OECD/IMF integration');
-    console.log('   ✅ Indicator mappings: Ready for cross-source analysis');
+    console.log(`   ✅ Country mappings: ${countryMappingResult.rows[0].country_mappings} ready for OECD/IMF integration`);
+    console.log(`   ✅ Indicator mappings: ${mappingCountResult.rows[0].mapping_count} ready for cross-source analysis`);
     console.log('   ✅ Industry structure: Compatible with multi-source approach');
     console.log('   ✅ Database schema: Ready for source-specific tables');
     
