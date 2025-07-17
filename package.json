@@ -1,8 +1,8 @@
 {
   "name": "industry-intelligence-db",
   "version": "1.0.0",
-  "description": "Database service for multi-industry intelligence with enhanced processing",
-  "main": "scripts/setup-db.js",
+  "description": "Database service for multi-industry intelligence with enhanced processing and file upload capabilities",
+  "main": "server.js",
   "scripts": {
     "setup": "node scripts/setup-db.js",
     "process-wb": "node scripts/process-wb-data.js",
@@ -11,10 +11,10 @@
     "process-wb-production": "node scripts/process-wb-api.js",
     "process-wb-simple": "node scripts/process-wb-simple.js",
     "process-wb-secure": "node scripts/process-wb-secure.js",
-    "process-wb-production": "node scripts/process-wb-enhanced.js",
     "download": "node scripts/download-data.js",
-    "start": "node scripts/setup-db.js",
-    "dev": "nodemon scripts/setup-db.js",
+    "start": "node server.js",
+    "dev": "nodemon server.js",
+    "setup-db": "node scripts/setup-db.js",
     "test": "echo \"Error: no test specified\" && exit 1",
     "lint": "echo \"No linting configured\" && exit 0",
     "security-audit": "npm audit --audit-level moderate",
@@ -26,7 +26,14 @@
     "csv-parser": "^3.0.0",
     "axios": "^1.6.0",
     "fs-extra": "^11.1.1",
-    "dotenv": "^16.3.1"
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "multer": "^1.4.5-lts.1",
+    "cors": "^2.8.5",
+    "helmet": "^7.1.0",
+    "express-rate-limit": "^7.1.5",
+    "mime-types": "^2.1.35",
+    "uuid": "^9.0.1"
   },
   "devDependencies": {
     "nodemon": "^3.0.1"
@@ -46,7 +53,10 @@
     "csv",
     "n8n",
     "automation",
-    "enhanced"
+    "enhanced",
+    "file-upload",
+    "express",
+    "multer"
   ],
   "author": "Eric Markowski",
   "license": "MIT",
