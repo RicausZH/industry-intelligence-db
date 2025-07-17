@@ -8,6 +8,7 @@
     "process-wb": "node scripts/process-wb-data.js",
     "process-wb-complete": "node scripts/process-wb-complete.js",
     "process-wb-enhanced": "node scripts/process-wb-enhanced.js",
+    "process-wb-production": "node scripts/process-wb-api.js",
     "process-wb-simple": "node scripts/process-wb-simple.js",
     "process-wb-secure": "node scripts/process-wb-secure.js",
     "process-wb-production": "node scripts/process-wb-enhanced.js",
@@ -19,6 +20,8 @@
     "security-audit": "npm audit --audit-level moderate",
     "db-migrate": "node scripts/setup-db.js",
     "db-seed": "node scripts/process-wb-enhanced.js"
+}
+    
   },
   "dependencies": {
     "pg": "^8.11.0",
