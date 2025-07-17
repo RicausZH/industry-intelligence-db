@@ -19,7 +19,8 @@
     "lint": "echo \"No linting configured\" && exit 0",
     "security-audit": "npm audit --audit-level moderate",
     "db-migrate": "node scripts/setup-db.js",
-    "db-seed": "node scripts/process-wb-enhanced.js"   
+    "db-seed": "node scripts/process-wb-enhanced.js"
+    "verify-db": "node scripts/verify-database.js"
   },
   "dependencies": {
     "pg": "^8.11.0",
