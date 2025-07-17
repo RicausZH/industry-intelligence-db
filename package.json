@@ -13,7 +13,13 @@
     "migrate-multi-source": "node scripts/run-migration.js 003_multi_source_foundation.sql",
     "setup-multi-source": "node scripts/populate-mappings.js",
     "rollback-multi-source": "node scripts/rollback-migration.js",
-    "fix-mappings": "node scripts/run-migration.js 004_fix_indicator_mappings.sql"
+    "fix-mappings": "node scripts/run-migration.js 004_fix_indicator_mappings.sql",
+    "fix-field-sizes": "node scripts/run-migration.js 005_fix_field_sizes.sql",
+    "analyze-coverage": "node scripts/analyze-data-coverage.js",
+    "process-oecd": "node scripts/process-oecd-integration.js",
+    "process-imf": "node scripts/process-imf-integration.js",
+    "build-unified-views": "node scripts/build-unified-views.js",
+    "test-multi-source": "node scripts/test-multi-source.js"
   },
   "dependencies": {
     "pg": "^8.11.0",
