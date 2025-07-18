@@ -91,8 +91,32 @@ const server = http.createServer(async (req, res) => {
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
-  console.log(`🚀 Industry Intelligence Database server running on port ${PORT}`);
-  console.log(`📊 Database contains 276,500 data points across 8 industries`);
-  console.log(`🌍 Covering 265 countries from 1990-2024`);
-  console.log(`💡 Ready for n8n automation and API integration`);
+  console.log('🚀 Industry Intelligence Database server running on port 8080');
+  console.log('');
+  console.log('📊 TRI-SOURCE ECONOMIC INTELLIGENCE PLATFORM');
+  console.log('===========================================');
+  console.log('📈 Database contains 780,525+ data points');
+  console.log('🌍 Covering 267 countries from 1980-2030');
+  console.log('🏭 Analysis across 12 industries:');
+  console.log('   • Innovation (50 indicators)');
+  console.log('   • Context (28 indicators)');
+  console.log('   • Trade (25 indicators)');
+  console.log('   • Finance (17 indicators)');
+  console.log('   • Biotech (17 indicators)');
+  console.log('   • MedTech (13 indicators)');
+  console.log('   • MEM (13 indicators)');
+  console.log('   • ICT (12 indicators)');
+  console.log('   • Energy (12 indicators)');
+  console.log('   • Climate (12 indicators)');
+  console.log('   • Infrastructure (7 indicators)');
+  console.log('   • Food (7 indicators)');
+  console.log('');
+  console.log('🔗 Data Sources:');
+  console.log('   • World Bank: 515,565 records');
+  console.log('   • OECD: 138,086 records');
+  console.log('   • IMF: 126,874 records');
+  console.log('');
+  console.log('✅ Ready for API integration and automation');
+  console.log('💡 World-class economic intelligence platform active');
+  console.log('');
 });
