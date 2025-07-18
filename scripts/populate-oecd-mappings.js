@@ -1,494 +1,487 @@
+const https = require('https');
+const http = require('http');
+const csv = require('csv-parser');
 const { Pool } = require('pg');
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+  max: 10,
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 2000,
 });
 
-// OECD MSTI Indicator Mappings to Your 12 Industries
-const OECD_INDICATOR_MAPPINGS = {
-  // 🔬 INNOVATION INDUSTRY (Your biggest gap - Priority #1)
-  'innovation': {
-    'B': {
-      name: 'Business R&D Expenditure (BERD)',
-      description: 'Business Enterprise Expenditure on R&D',
-      wb_equivalent: 'GB.XPD.RSDV.GD.ZS',
-      priority: 1
-    },
-    'GV': {
-      name: 'Government R&D Expenditure (GOVERD)',
-      description: 'Government Intramural Expenditure on R&D',
-      wb_equivalent: 'GB.XPD.RSDV.GD.ZS',
-      priority: 1
-    },
-    'PT_GERD': {
-      name: 'Total R&D Expenditure (% of GDP)',
-      description: 'Percentage of gross domestic expenditure on R&D',
-      wb_equivalent: 'GB.XPD.RSDV.GD.ZS',
-      priority: 1
-    },
-    'PT_BERD': {
-      name: 'Business R&D (% of total)',
-      description: 'Percentage of business enterprise expenditure on R&D',
-      wb_equivalent: 'GB.XPD.RSDV.GD.ZS',
-      priority: 1
-    },
-    'PT_GOVERD': {
-      name: 'Government R&D (% of total)',
-      description: 'Percentage of government intramural expenditure on R&D',
-      wb_equivalent: 'GB.XPD.RSDV.GD.ZS',
-      priority: 1
-    },
-    'PT_HERD': {
-      name: 'Higher Education R&D (% of total)',
-      description: 'Percentage of higher education expenditure on R&D',
-      wb_equivalent: 'GB.XPD.RSDV.GD.ZS',
-      priority: 1
-    },
-    'B_FB': {
-      name: 'Business R&D Financed by Business',
-      description: 'BERD financed by the business sector',
-      wb_equivalent: 'GB.XPD.RSDV.GD.ZS',
-      priority: 2
-    },
-    'B_FG': {
-      name: 'Business R&D Financed by Government',
-      description: 'BERD financed by government',
-      wb_equivalent: 'GB.XPD.RSDV.GD.ZS',
-      priority: 2
-    },
-    'B_FA': {
-      name: 'Business R&D Financed by Foreign Sources',
-      description: 'BERD financed by the rest of the world',
-      wb_equivalent: 'GB.XPD.RSDV.GD.ZS',
-      priority: 2
-    },
-    'G_FG': {
-      name: 'Total R&D Financed by Government',
-      description: 'GERD financed by government',
-      wb_equivalent: 'GB.XPD.RSDV.GD.ZS',
-      priority: 2
-    },
-    'G_FA': {
-      name: 'Total R&D Financed by Foreign Sources',
-      description: 'GERD financed by the rest of the world',
-      wb_equivalent: 'GB.XPD.RSDV.GD.ZS',
-      priority: 2
-    },
-    'PT_GBARD': {
-      name: 'Government R&D Budget Allocation',
-      description: 'Percentage of government allocations for R&D',
-      wb_equivalent: 'GB.XPD.RSDV.GD.ZS',
-      priority: 2
-    }
-  },
+// Pre-loaded mappings to avoid database calls during processing
+let INDICATOR_MAPPINGS = {};
+let COUNTRY_MAPPINGS = {};
 
-  // 💻 ICT INDUSTRY (High-Value Enhancement)
-  'ict': {
-    'P_ICTPCT': {
-      name: 'ICT Patents (PCT Applications)',
-      description: 'Patents in the ICT sector - applications filed under the PCT',
-      wb_equivalent: 'IP.PAT.RESD',
-      priority: 1
-    },
-    'TD_ECOMP': {
-      name: 'Computer & Electronics Exports',
-      description: 'Export of computer, electronic and optical industry',
-      wb_equivalent: 'TX.VAL.TECH.CD',
-      priority: 1
-    }
-  },
-
-  // 🧬 BIOTECH INDUSTRY (Advanced R&D Metrics)
-  'biotech': {
-    'P_BIOPCT': {
-      name: 'Biotechnology Patents (PCT Applications)',
-      description: 'Patents in the biotechnology sector - applications filed under the PCT',
-      wb_equivalent: 'IP.PAT.RESD',
-      priority: 1
-    },
-    'TD_EDRUG': {
-      name: 'Pharmaceutical Exports',
-      description: 'Export of pharmaceutical industry',
-      wb_equivalent: 'TX.VAL.TECH.CD',
-      priority: 1
-    },
-    'C_HEA': {
-      name: 'Government Health R&D Budget',
-      description: 'Civil GBARD for Health and Environment programmes',
-      wb_equivalent: 'SH.XPD.CHEX.GD.ZS',
-      priority: 1
-    }
-  },
-
-  // 🏥 MEDTECH INDUSTRY (Healthcare Innovation)
-  'medtech': {
-    'C_HEA': {
-      name: 'Government Health R&D Budget',
-      description: 'Civil GBARD for Health and Environment programmes',
-      wb_equivalent: 'SH.XPD.CHEX.GD.ZS',
-      priority: 1
-    },
-    'TD_EDRUG': {
-      name: 'Pharmaceutical Exports',
-      description: 'Export of pharmaceutical industry',
-      wb_equivalent: 'TX.VAL.TECH.CD',
-      priority: 1
-    }
-  },
-
-  // ⚙️ MEM INDUSTRY (Manufacturing Enhancement)
-  'mem': {
-    'B_AERO': {
-      name: 'Aerospace R&D',
-      description: 'BERD performed in the aerospace industry',
-      wb_equivalent: 'TX.VAL.TECH.CD',
-      priority: 1
-    },
-    'TD_EAERO': {
-      name: 'Aerospace Exports',
-      description: 'Export of aerospace industry',
-      wb_equivalent: 'TX.VAL.TECH.CD',
-      priority: 1
-    }
-  },
-
-  // ⚡ ENERGY INDUSTRY (Energy R&D)
-  'energy': {
-    'C_ECO': {
-      name: 'Government Economic Development R&D',
-      description: 'Civil GBARD for Economic Development programmes',
-      wb_equivalent: 'EG.ELC.ACCS.ZS',
-      priority: 2
-    }
-  },
-
-  // 🌍 CLIMATE INDUSTRY (Environmental R&D)
-  'climate': {
-    'C_HEA': {
-      name: 'Government Health & Environment R&D',
-      description: 'Civil GBARD for Health and Environment programmes',
-      wb_equivalent: 'EN.ATM.CO2E.PC',
-      priority: 2
-    }
-  },
-
-  // 💰 FINANCE INDUSTRY (Innovation Finance)
-  'finance': {
-    'B_FB': {
-      name: 'Business R&D Self-Financing',
-      description: 'BERD financed by the business sector',
-      wb_equivalent: 'FS.AST.PRVT.GD.ZS',
-      priority: 2
-    },
-    'B_FG': {
-      name: 'Government R&D Financing',
-      description: 'BERD financed by government',
-      wb_equivalent: 'FS.AST.PRVT.GD.ZS',
-      priority: 2
-    },
-    'B_FA': {
-      name: 'Foreign R&D Investment',
-      description: 'BERD financed by the rest of the world',
-      wb_equivalent: 'BX.KLT.DINV.WD.GD.ZS',
-      priority: 2
-    }
-  },
-
-  // 🌐 TRADE INDUSTRY (Technology Trade)
-  'trade': {
-    'TD_ECOMP': {
-      name: 'Computer & Electronics Exports',
-      description: 'Export of computer, electronic and optical industry',
-      wb_equivalent: 'TX.VAL.TECH.CD',
-      priority: 1
-    },
-    'TD_EAERO': {
-      name: 'Aerospace Exports',
-      description: 'Export of aerospace industry',
-      wb_equivalent: 'TX.VAL.TECH.CD',
-      priority: 1
-    },
-    'TD_EDRUG': {
-      name: 'Pharmaceutical Exports',
-      description: 'Export of pharmaceutical industry',
-      wb_equivalent: 'TX.VAL.TECH.CD',
-      priority: 1
-    }
-  },
-
-  // 🏛️ CONTEXT INDUSTRY (Innovation Context)
-  'context': {
-    'PPP': {
-      name: 'Purchasing Power Parity',
-      description: 'Purchasing power parity for international comparisons',
-      wb_equivalent: 'NY.GDP.PCAP.PP.KD',
-      priority: 2
-    },
-    'XDC_USD': {
-      name: 'Exchange Rate (National Currency per USD)',
-      description: 'National currency per US dollar',
-      wb_equivalent: 'PA.NUS.FCRF',
-      priority: 2
-    },
-    'PT_B1GQ': {
-      name: 'Innovation Intensity (% of GDP)',
-      description: 'Percentage of GDP spent on innovation activities',
-      wb_equivalent: 'NY.GDP.MKTP.KD.ZG',
-      priority: 2
-    }
+// Input validation functions (same as your WB script)
+function validateURL(url) {
+  if (!url || typeof url !== 'string') {
+    throw new Error('Invalid URL provided');
   }
-};
-
-// OECD Country Code Mappings (45 countries from your MSTI file)
-const OECD_COUNTRY_MAPPINGS = {
-  // Core OECD Members
-  'AUS': 'AUS', 'AUT': 'AUT', 'BEL': 'BEL', 'CAN': 'CAN', 'CHL': 'CHL',
-  'COL': 'COL', 'CRI': 'CRI', 'CZE': 'CZE', 'DNK': 'DNK', 'EST': 'EST',
-  'FIN': 'FIN', 'FRA': 'FRA', 'DEU': 'DEU', 'GRC': 'GRC', 'HUN': 'HUN',
-  'ISL': 'ISL', 'IRL': 'IRL', 'ISR': 'ISR', 'ITA': 'ITA', 'JPN': 'JPN',
-  'KOR': 'KOR', 'LVA': 'LVA', 'LTU': 'LTU', 'LUX': 'LUX', 'MEX': 'MEX',
-  'NLD': 'NLD', 'NZL': 'NZL', 'NOR': 'NOR', 'POL': 'POL', 'PRT': 'PRT',
-  'SVK': 'SVK', 'SVN': 'SVN', 'ESP': 'ESP', 'SWE': 'SWE', 'CHE': 'CHE',
-  'TUR': 'TUR', 'GBR': 'GBR', 'USA': 'USA',
-  
-  // OECD Partner Countries (from your MSTI file)
-  'ARG': 'ARG', 'BGR': 'BGR', 'CHN': 'CHN', 'HRV': 'HRV', 'ROU': 'ROU',
-  'RUS': 'RUS', 'SGP': 'SGP', 'ZAF': 'ZAF', 'TWN': 'TWN'
-};
-
-// Update country mappings with OECD codes (FIXED - no updated_at column)
-async function updateCountryMappingsWithOECD() {
-  const client = await pool.connect();
-  
-  try {
-    console.log('🗺️ Updating country mappings with OECD codes...');
-    
-    let updateCount = 0;
-    
-    for (const [wbCode, oecdCode] of Object.entries(OECD_COUNTRY_MAPPINGS)) {
-      const result = await client.query(`
-        UPDATE country_mappings 
-        SET oecd_code = $1
-        WHERE wb_code = $2 OR unified_code = $2
-        RETURNING unified_code, country_name
-      `, [oecdCode, wbCode]);
-      
-      if (result.rows.length > 0) {
-        updateCount++;
-        console.log(`   ✅ ${result.rows[0].unified_code}: ${result.rows[0].country_name} → OECD:${oecdCode}`);
-      }
-    }
-    
-    console.log(`✅ Updated ${updateCount} country mappings with OECD codes`);
-    
-    // Show summary
-    const summaryResult = await client.query(`
-      SELECT 
-        COUNT(*) as total_countries,
-        COUNT(oecd_code) as oecd_mapped,
-        COUNT(wb_code) as wb_mapped
-      FROM country_mappings
-    `);
-    
-    const summary = summaryResult.rows[0];
-    console.log(`📊 Country mapping summary:`);
-    console.log(`   - Total countries: ${summary.total_countries}`);
-    console.log(`   - WB mapped: ${summary.wb_mapped}`);
-    console.log(`   - OECD mapped: ${summary.oecd_mapped}`);
-    
-  } catch (error) {
-    console.error('❌ Error updating country mappings:', error);
-    throw error;
-  } finally {
-    client.release();
-  }
+  return url;
 }
 
-// Add OECD indicator mappings (FIXED - no updated_at column)
-async function addOECDIndicatorMappings() {
-  const client = await pool.connect();
-  
-  try {
-    console.log('📋 Adding OECD indicator mappings...');
-    
-    let totalMappings = 0;
-    
-    for (const [industry, indicators] of Object.entries(OECD_INDICATOR_MAPPINGS)) {
-      console.log(`\n🏭 Processing ${industry.toUpperCase()} industry...`);
-      
-      for (const [oecdCode, details] of Object.entries(indicators)) {
-        const unifiedConcept = `OECD_${industry.toUpperCase()}_${details.name}`;
-        
-        // Check if mapping already exists
-        const existingResult = await client.query(`
-          SELECT id FROM indicator_mappings 
-          WHERE oecd_code = $1 AND industry = $2
-        `, [oecdCode, industry]);
-        
-        if (existingResult.rows.length > 0) {
-          // Update existing mapping
-          await client.query(`
-            UPDATE indicator_mappings 
-            SET unified_concept = $1, concept_description = $2, 
-                priority_source = CASE WHEN priority_source = 'WB' THEN 'WB' ELSE 'OECD' END
-            WHERE oecd_code = $3 AND industry = $4
-          `, [unifiedConcept, details.description, oecdCode, industry]);
-          
-          console.log(`   ✅ Updated: ${oecdCode} → ${details.name}`);
-        } else {
-          // Insert new mapping
-          await client.query(`
-            INSERT INTO indicator_mappings 
-            (unified_concept, concept_description, wb_code, oecd_code, priority_source, industry)
-            VALUES ($1, $2, $3, $4, $5, $6)
-            ON CONFLICT (unified_concept) DO UPDATE SET
-              oecd_code = EXCLUDED.oecd_code,
-              concept_description = EXCLUDED.concept_description,
-              priority_source = EXCLUDED.priority_source
-          `, [unifiedConcept, details.description, details.wb_equivalent, oecdCode, 'OECD', industry]);
-          
-          console.log(`   ✅ Added: ${oecdCode} → ${details.name}`);
-        }
-        
-        totalMappings++;
-      }
-    }
-    
-    console.log(`\n✅ Processed ${totalMappings} OECD indicator mappings`);
-    
-    // Show summary by industry
-    const industryResult = await client.query(`
-      SELECT 
-        industry,
-        COUNT(*) as total_indicators,
-        COUNT(wb_code) as wb_indicators,
-        COUNT(oecd_code) as oecd_indicators,
-        COUNT(imf_code) as imf_indicators
-      FROM indicator_mappings
-      GROUP BY industry
-      ORDER BY oecd_indicators DESC
-    `);
-    
-    console.log(`\n📊 Updated indicator mappings by industry:`);
-    industryResult.rows.forEach(row => {
-      console.log(`   ${row.industry}: ${row.total_indicators} total | WB:${row.wb_indicators} | OECD:${row.oecd_indicators} | IMF:${row.imf_indicators}`);
-    });
-    
-  } catch (error) {
-    console.error('❌ Error adding OECD indicator mappings:', error);
-    throw error;
-  } finally {
-    client.release();
-  }
+function sanitizeString(str, maxLength = 255) {
+  if (!str || typeof str !== 'string') return null;
+  const sanitized = str
+    .replace(/[<>\"'&]/g, '')
+    .replace(/[\x00-\x1F\x7F]/g, '')
+    .trim()
+    .substring(0, maxLength);
+  return sanitized || null;
 }
 
-// Show readiness for OECD integration
-async function showOECDReadiness() {
+function validateValue(value) {
+  if (!value || value === '' || value === '..' || value === 'NaN') return null;
+  const numValue = parseFloat(value);
+  if (isNaN(numValue) || !isFinite(numValue)) return null;
+  if (numValue < -1000000 || numValue > 1000000000) return null;
+  return numValue;
+}
+
+function validateYear(year) {
+  const numYear = parseInt(year);
+  if (isNaN(numYear) || numYear < 1960 || numYear > 2030) return null;
+  return numYear;
+}
+
+function validateCountryCode(code) {
+  if (!code || typeof code !== 'string' || code.length !== 3) return null;
+  return code.replace(/[^A-Z0-9]/g, '').substring(0, 3);
+}
+
+function validateIndicatorCode(code) {
+  if (!code || typeof code !== 'string' || code.length > 50) return null;
+  return code.replace(/[^A-Z0-9._-]/g, '').substring(0, 50);
+}
+
+// Pre-load all mappings (same as before)
+async function preloadMappings() {
   const client = await pool.connect();
-  
   try {
-    console.log('\n🎯 OECD INTEGRATION READINESS ASSESSMENT');
-    console.log('=========================================');
+    console.log('🔄 Pre-loading indicator and country mappings...');
     
-    // Check OECD countries ready
-    const oecdCountriesResult = await client.query(`
-      SELECT COUNT(*) as oecd_ready
-      FROM country_mappings 
-      WHERE oecd_code IS NOT NULL
-    `);
-    
-    // Check OECD indicators ready
-    const oecdIndicatorsResult = await client.query(`
-      SELECT COUNT(*) as oecd_ready
+    // Load indicator mappings
+    const indicatorResult = await client.query(`
+      SELECT oecd_code, industry 
       FROM indicator_mappings 
       WHERE oecd_code IS NOT NULL
     `);
     
-    // Check target industries
-    const industryReadiness = await client.query(`
-      SELECT 
-        industry,
-        COUNT(*) FILTER (WHERE oecd_code IS NOT NULL) as oecd_ready,
-        COUNT(*) as total_indicators
-      FROM indicator_mappings
-      GROUP BY industry
-      ORDER BY oecd_ready DESC
-    `);
-    
-    console.log(`✅ OECD Country Mappings: ${oecdCountriesResult.rows[0].oecd_ready} countries ready`);
-    console.log(`✅ OECD Indicator Mappings: ${oecdIndicatorsResult.rows[0].oecd_ready} indicators ready`);
-    
-    console.log(`\n🏭 Industry Readiness for OECD Integration:`);
-    industryReadiness.rows.forEach(row => {
-      const percentage = ((row.oecd_ready / row.total_indicators) * 100).toFixed(1);
-      console.log(`   ${row.industry}: ${row.oecd_ready}/${row.total_indicators} (${percentage}%) ready`);
+    indicatorResult.rows.forEach(row => {
+      INDICATOR_MAPPINGS[row.oecd_code] = row.industry;
     });
     
-    // Show expected data volume
-    const currentData = await client.query(`
-      SELECT 
-        industry,
-        COUNT(*) as current_wb_records
-      FROM indicators
-      WHERE industry IN ('innovation', 'ict', 'biotech', 'medtech', 'mem', 'trade')
-      GROUP BY industry
-      ORDER BY current_wb_records ASC
+    // Load country mappings
+    const countryResult = await client.query(`
+      SELECT oecd_code, country_name, unified_code
+      FROM country_mappings 
+      WHERE oecd_code IS NOT NULL
     `);
     
-    console.log(`\n📊 Expected OECD Data Volume (Current WB vs Projected OECD):`);
-    currentData.rows.forEach(row => {
-      const projectedOECD = Math.floor(row.current_wb_records * 1.5); // Conservative estimate
-      console.log(`   ${row.industry}: ${row.current_wb_records} (WB) → +${projectedOECD} (OECD) = ${parseInt(row.current_wb_records) + projectedOECD} total`);
+    countryResult.rows.forEach(row => {
+      COUNTRY_MAPPINGS[row.oecd_code] = {
+        name: row.country_name,
+        unified_code: row.unified_code
+      };
     });
     
-    console.log(`\n🚀 READY TO PROCESS OECD MSTI DATA!`);
-    console.log(`   - Run: npm run process-oecd -- --url "YOUR_OECD_CSV_URL"`);
-    console.log(`   - Expected result: 100,000+ new innovation data points`);
+    console.log(`✅ Pre-loaded ${Object.keys(INDICATOR_MAPPINGS).length} indicator mappings`);
+    console.log(`✅ Pre-loaded ${Object.keys(COUNTRY_MAPPINGS).length} country mappings`);
     
   } catch (error) {
-    console.error('❌ Error assessing OECD readiness:', error);
+    console.error('❌ Error pre-loading mappings:', error);
     throw error;
   } finally {
     client.release();
   }
 }
 
-// Main function
-async function populateOECDMappings() {
+// Get industry and country info using pre-loaded mappings
+function getIndicatorIndustry(indicatorCode) {
+  return INDICATOR_MAPPINGS[indicatorCode] || 'general';
+}
+
+function getCountryInfo(countryCode) {
+  const mapping = COUNTRY_MAPPINGS[countryCode];
+  if (mapping) {
+    return {
+      name: mapping.name,
+      unified_code: mapping.unified_code
+    };
+  }
+  return {
+    name: countryCode,
+    unified_code: countryCode
+  };
+}
+
+// Enhanced CSV processing (same pattern as your WB script)
+async function processCSVFromURL(url, processingFunction) {
+  const validatedUrl = validateURL(url);
+  
+  return new Promise((resolve, reject) => {
+    console.log(`🚀 Attempting to download from: ${validatedUrl}`);
+    
+    const timeout = setTimeout(() => {
+      reject(new Error('Download timeout'));
+    }, 900000); // 15 minute timeout
+    
+    const makeRequest = (requestUrl, redirectCount = 0) => {
+      if (redirectCount > 10) {
+        clearTimeout(timeout);
+        reject(new Error('Too many redirects'));
+        return;
+      }
+      
+      const urlObj = new URL(requestUrl);
+      const client = urlObj.protocol === 'https:' ? https : http;
+      
+      const options = {
+        hostname: urlObj.hostname,
+        port: urlObj.port,
+        path: urlObj.pathname + urlObj.search,
+        method: 'GET',
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+        }
+      };
+      
+      const req = client.request(options, (response) => {
+        console.log(`🔄 Response status: ${response.statusCode}`);
+        console.log(`📄 Content-Type: ${response.headers['content-type']}`);
+        
+        // Handle redirects
+        if ([301, 302, 303, 307, 308].includes(response.statusCode)) {
+          const location = response.headers.location;
+          if (location) {
+            console.log(`↪️ Following redirect ${redirectCount + 1}/10...`);
+            makeRequest(location, redirectCount + 1);
+            return;
+          }
+        }
+        
+        if (response.statusCode === 200) {
+          const contentType = response.headers['content-type'] || '';
+          
+          // Check if we got HTML (download page)
+          if (contentType.includes('text/html')) {
+            console.log(`🌐 Received HTML page, attempting to extract download link...`);
+            
+            let htmlData = '';
+            response.on('data', chunk => {
+              htmlData += chunk.toString();
+            });
+            
+            response.on('end', () => {
+              // Try to find the direct download link
+              const downloadLinkMatch = htmlData.match(/href="([^"]*uc\?export=download[^"]*)"/);
+              if (downloadLinkMatch) {
+                const downloadLink = downloadLinkMatch[1].replace(/&amp;/g, '&');
+                console.log(`🔗 Found download link, retrying...`);
+                makeRequest(downloadLink, redirectCount + 1);
+                return;
+              }
+              
+              // If no download link found, try to process as CSV
+              console.log(`🔄 Processing HTML response as CSV data...`);
+              clearTimeout(timeout);
+              processingFunction(response, resolve, reject);
+            });
+            return;
+          }
+          
+          // Process as CSV
+          console.log(`📊 Received CSV data, processing...`);
+          clearTimeout(timeout);
+          processingFunction(response, resolve, reject);
+          return;
+        }
+        
+        clearTimeout(timeout);
+        reject(new Error(`Unexpected response: ${response.statusCode} ${response.headers['content-type']}`));
+      });
+      
+      req.on('error', (error) => {
+        clearTimeout(timeout);
+        reject(error);
+      });
+      
+      req.end();
+    };
+    
+    makeRequest(validatedUrl);
+  });
+}
+
+// OECD MSTI data processing with batching
+async function processOECDMSTIData(url) {
+  console.log('🔄 Processing OECD MSTI data file...');
+  
+  return processCSVFromURL(url, (response, resolve, reject) => {
+    const results = [];
+    let rowCount = 0;
+    let processedCount = 0;
+    let validationErrors = 0;
+    let skippedRows = 0;
+    
+    const industryStats = {};
+    
+    response
+      .pipe(csv())
+      .on('data', (row) => {
+        rowCount++;
+        if (rowCount % 50000 === 0) {
+          console.log(`📊 Processed ${rowCount} rows, found ${processedCount} valid data points, ${validationErrors} validation errors...`);
+        }
+        
+        try {
+          const countryCode = validateCountryCode(row['REF_AREA']);
+          const indicatorCode = validateIndicatorCode(row['MEASURE']);
+          const year = validateYear(row['TIME_PERIOD']);
+          const value = validateValue(row['OBS_VALUE']);
+          
+          if (!countryCode || !indicatorCode || !year || value === null) {
+            if (!countryCode || !indicatorCode || !year) {
+              validationErrors++;
+            } else {
+              skippedRows++;
+            }
+            return;
+          }
+          
+          // Get mappings (no database calls)
+          const industry = getIndicatorIndustry(indicatorCode);
+          const countryInfo = getCountryInfo(countryCode);
+          
+          // Track industry statistics
+          if (!industryStats[industry]) {
+            industryStats[industry] = 0;
+          }
+          industryStats[industry]++;
+          
+          results.push({
+            country_code: countryInfo.unified_code,
+            country_name: countryInfo.name,
+            indicator_code: indicatorCode,
+            indicator_name: sanitizeString(row['Measure'], 255),
+            year: year,
+            value: value,
+            industry: industry,
+            source: 'OECD'
+          });
+          
+          processedCount++;
+          
+        } catch (error) {
+          console.error(`Error processing row ${rowCount}:`, error);
+          validationErrors++;
+        }
+      })
+      .on('end', () => {
+        console.log(`✅ Enhanced OECD data processing complete!`);
+        console.log(`   - Total CSV rows processed: ${rowCount}`);
+        console.log(`   - Valid data points extracted: ${processedCount}`);
+        console.log(`   - Validation errors: ${validationErrors}`);
+        console.log(`   - Skipped rows: ${skippedRows}`);
+        
+        console.log(`\n📊 Industry distribution:`);
+        Object.entries(industryStats).forEach(([industry, count]) => {
+          console.log(`   - ${industry}: ${count} data points`);
+        });
+        
+        resolve(results);
+      })
+      .on('error', (error) => {
+        console.error(`❌ CSV processing error: ${error.message}`);
+        reject(error);
+      });
+  });
+}
+
+// Secure batch data insertion (same pattern as your WB script)
+async function insertBatchOECDData(data) {
+  if (data.length === 0) {
+    console.log('⚠️  No data to insert');
+    return;
+  }
+  
+  const client = await pool.connect();
+  
   try {
-    console.log('🚀 POPULATING OECD MAPPINGS');
-    console.log('============================');
-    console.log('🎯 Target: 45 OECD countries + 36 innovation indicators');
-    console.log('🔒 Safe: Adding OECD mappings without changing existing WB data');
+    await client.query('BEGIN');
+    await client.query('DELETE FROM oecd_indicators WHERE source = $1', ['OECD']);
+    console.log('🗑️ Cleared existing OECD data');
     
-    await updateCountryMappingsWithOECD();
-    await addOECDIndicatorMappings();
-    await showOECDReadiness();
+    const batchSize = 1000;
+    const totalBatches = Math.ceil(data.length / batchSize);
     
-    console.log('\n🎉 OECD MAPPINGS POPULATED SUCCESSFULLY!');
-    console.log('✅ Country mappings updated with OECD codes');
-    console.log('✅ Indicator mappings enhanced with OECD indicators');
-    console.log('✅ Ready for OECD MSTI data processing');
-    console.log('✅ Your World Bank data remains completely untouched');
+    for (let i = 0; i < data.length; i += batchSize) {
+      const batch = data.slice(i, i + batchSize);
+      
+      const valueStrings = [];
+      const values = [];
+      let paramIndex = 1;
+      
+      for (const item of batch) {
+        valueStrings.push(`($${paramIndex}, $${paramIndex + 1}, $${paramIndex + 2}, $${paramIndex + 3}, $${paramIndex + 4}, $${paramIndex + 5}, $${paramIndex + 6}, $${paramIndex + 7}, $${paramIndex + 8})`);
+        values.push(
+          null, // dataflow
+          item.country_code,
+          item.indicator_code,
+          item.year.toString(),
+          item.value,
+          item.industry,
+          item.source,
+          4, // data_quality_score
+          new Date() // created_at
+        );
+        paramIndex += 9;
+      }
+      
+      const query = `
+        INSERT INTO oecd_indicators (dataflow, country_code, indicator_code, time_period, obs_value, industry, source, data_quality_score, created_at)
+        VALUES ${valueStrings.join(', ')}
+        ON CONFLICT (country_code, indicator_code, time_period, source) DO UPDATE SET
+        obs_value = EXCLUDED.obs_value,
+        industry = EXCLUDED.industry,
+        data_quality_score = EXCLUDED.data_quality_score,
+        created_at = CURRENT_TIMESTAMP
+      `;
+      
+      await client.query(query, values);
+      const currentBatch = Math.ceil(i/batchSize) + 1;
+      console.log(`✅ Inserted batch ${currentBatch}/${totalBatches} (${batch.length} records)`);
+    }
+    
+    await client.query('COMMIT');
+    console.log('🎉 OECD data insertion complete!');
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('❌ Error inserting data:', error);
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
+// Show integration summary
+async function showIntegrationSummary() {
+  const client = await pool.connect();
+  try {
+    console.log('\n🎯 MULTI-SOURCE INTEGRATION SUMMARY');
+    console.log('====================================');
+    
+    // Get total counts
+    const wbCount = await client.query('SELECT COUNT(*) FROM indicators WHERE source = $1', ['WB']);
+    const oecdCount = await client.query('SELECT COUNT(*) FROM oecd_indicators WHERE source = $1', ['OECD']);
+    
+    console.log(`📊 Database Summary:`);
+    console.log(`   World Bank: ${wbCount.rows[0].count} records`);
+    console.log(`   OECD: ${oecdCount.rows[0].count} records`);
+    console.log(`   Total: ${parseInt(wbCount.rows[0].count) + parseInt(oecdCount.rows[0].count)} records`);
+    
+    // Industry comparison
+    const industryStats = await client.query(`
+      SELECT 
+        COALESCE(wb.industry, oecd.industry) as industry,
+        COALESCE(wb.wb_count, 0) as wb_count,
+        COALESCE(oecd.oecd_count, 0) as oecd_count,
+        COALESCE(wb.wb_count, 0) + COALESCE(oecd.oecd_count, 0) as total_count
+      FROM (
+        SELECT industry, COUNT(*) as wb_count
+        FROM indicators 
+        WHERE source = 'WB' AND industry IS NOT NULL
+        GROUP BY industry
+      ) wb
+      FULL OUTER JOIN (
+        SELECT industry, COUNT(*) as oecd_count
+        FROM oecd_indicators 
+        WHERE source = 'OECD' AND industry IS NOT NULL
+        GROUP BY industry
+      ) oecd ON wb.industry = oecd.industry
+      ORDER BY total_count DESC
+    `);
+    
+    console.log(`\n🏭 Industry Enhancement:`);
+    industryStats.rows.forEach(row => {
+      const increase = row.oecd_count > 0 ? `+${row.oecd_count}` : 'No OECD data';
+      console.log(`   ${row.industry}: ${row.wb_count} (WB) + ${row.oecd_count} (OECD) = ${row.total_count} total`);
+    });
+    
+    console.log(`\n🎉 MULTI-SOURCE INTEGRATION COMPLETE!`);
     
   } catch (error) {
-    console.error('❌ OECD mapping population failed:', error);
+    console.error('❌ Error showing summary:', error);
+  } finally {
+    client.release();
+  }
+}
+
+// Main processing function
+async function processEnhancedOECDData(url) {
+  try {
+    console.log('🚀 Starting Enhanced OECD MSTI Processing...');
+    console.log('============================================');
+    console.log('🔒 Security: Input validation, sanitization, and parameterized queries enabled');
+    console.log('📊 Processing: Using proven batch processing pattern (1000 records per batch)');
+    
+    // Step 1: Pre-load mappings
+    await preloadMappings();
+    
+    // Step 2: Process OECD data
+    console.log('\n⏳ Processing OECD MSTI data...');
+    const oecdData = await processOECDMSTIData(url);
+    
+    // Step 3: Insert data in batches
+    console.log('\n💾 Starting secure batch insertion...');
+    await insertBatchOECDData(oecdData);
+    
+    // Step 4: Show summary
+    await showIntegrationSummary();
+    
+    console.log('\n🎉 ENHANCED OECD PROCESSING COMPLETE!');
+    console.log(`📊 Final statistics:`);
+    console.log(`   - Total OECD data points: ${oecdData.length}`);
+    console.log(`   - Multi-source database ready`);
+    console.log(`   - Ready for unified view creation`);
+    
+  } catch (error) {
+    console.error('❌ Enhanced processing failed:', error);
     throw error;
   }
 }
 
-// Command line execution
+// Command line argument parsing
+function parseArguments() {
+  const args = process.argv.slice(2);
+  
+  const urlIndex = args.indexOf('--url');
+  if (urlIndex === -1 || !args[urlIndex + 1]) {
+    console.error('❌ Usage: npm run process-oecd -- --url "YOUR_OECD_CSV_URL"');
+    process.exit(1);
+  }
+  
+  return {
+    url: args[urlIndex + 1]
+  };
+}
+
+// Command line usage
 if (require.main === module) {
-  populateOECDMappings()
+  const { url } = parseArguments();
+  
+  processEnhancedOECDData(url)
     .then(() => {
-      console.log('✅ OECD mappings complete!');
+      console.log('✅ All enhanced processing complete! Your multi-source database is ready.');
       process.exit(0);
     })
     .catch(error => {
-      console.error('❌ OECD mapping failed:', error);
+      console.error('❌ Enhanced processing failed:', error);
       process.exit(1);
     });
 }
 
-module.exports = { populateOECDMappings };
+module.exports = { processEnhancedOECDData };
