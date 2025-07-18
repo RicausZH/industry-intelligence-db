@@ -36,7 +36,7 @@
     "health-check": "npm run verify && npm run validate",
 
     "create-chatgpt-views": "node scripts/database/create-chatgpt-views.js",
-    "add-confidence-scoring": "node scripts/utils/confidence-scoring.js",
+    "add-confidence-scoring": "node scripts/utils/confidence-scoring-macro.js",
     "refresh-chatgpt-views": "node scripts/database/refresh-chatgpt-views.js",
     "test-chatgpt-integration": "node scripts/validation/test-chatgpt-views.js",
     "format-for-chatgpt": "node scripts/utils/chatgpt-data-formatter.js",
