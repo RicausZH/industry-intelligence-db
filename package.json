@@ -1,31 +1,36 @@
 {
   "name": "industry-intelligence-db",
   "version": "1.0.0",
-  "description": "Database service for multi-industry intelligence with enhanced data processing capabilities",
+  "description": "Tri-source economic intelligence database with World Bank, OECD, and IMF data integration",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "setup": "node scripts/setup-db.js",
-    "setup-db": "node scripts/setup-db.js",
-    "process-imf-weo": "node scripts/process-imf-weo.js",
-    "populate-imf-mappings": "node scripts/populate-imf-mappings.js",
-    "process-oecd": "node scripts/process-oecd-msti.js",
-    "populate-oecd-mappings-fixed": "node scripts/populate-oecd-mappings-fixed.js",
-    "populate-oecd-mappings": "node scripts/populate-oecd-mappings.js",
-    "analyze-comprehensive": "node scripts/analyze-comprehensive-database.js",
-    "process-wb-enhanced": "node scripts/process-wb-enhanced.js",
-    "download": "node scripts/download-data.js",
-    "verify-db": "node scripts/verify-database.js",
-    "migrate-multi-source": "node scripts/run-migration.js 003_multi_source_foundation.sql",
-    "setup-multi-source": "node scripts/populate-mappings.js",
+    
+    "setup-db": "node scripts/database/setup-db.js",
+    "migrate-multi-source": "node scripts/database/run-migration.js 003_multi_source_foundation.sql",
+    "fix-mappings": "node scripts/database/run-migration.js 004_fix_indicator_mappings.sql",
+    "fix-field-sizes": "node scripts/database/run-migration.js 005_fix_field_sizes.sql",
     "rollback-multi-source": "node scripts/rollback-migration.js",
-    "fix-mappings": "node scripts/run-migration.js 004_fix_indicator_mappings.sql",
-    "fix-field-sizes": "node scripts/run-migration.js 005_fix_field_sizes.sql",
-    "analyze-coverage": "node scripts/analyze-data-coverage.js",
-    "process-oecd": "node scripts/process-oecd-integration.js",
-    "process-imf": "node scripts/process-imf-integration.js",
-    "build-unified-views": "node scripts/build-unified-views.js",
-    "test-multi-source": "node scripts/test-multi-source.js"
+    
+    "download": "node scripts/data-acquisition/download-data.js",
+    
+    "populate-mappings": "node scripts/setup/populate-mappings.js",
+    "populate-imf-mappings": "node scripts/setup/populate-imf-mappings.js",
+    "populate-oecd-mappings": "node scripts/setup/populate-oecd-mappings-fixed.js",
+    
+    "process-wb-enhanced": "node scripts/data-processing/process-wb-enhanced.js",
+    "process-oecd": "node scripts/data-processing/process-oecd-msti.js",
+    "process-imf": "node scripts/data-processing/process-imf-weo.js",
+    
+    "analyze-comprehensive": "node scripts/analysis/analyze-comprehensive-database.js",
+    "verify-db": "node scripts/analysis/verify-database.js",
+    "analyze-coverage": "node scripts/analysis/analyze-data-coverage.js",
+    
+    "validate-data": "node scripts/validation/validate-data-integrity.js",
+    
+    "full-setup": "npm run setup-db && npm run populate-mappings && npm run populate-imf-mappings",
+    "health-check": "npm run verify-db && npm run validate-data",
+    "complete-integration": "npm run process-wb-enhanced && npm run process-oecd && npm run process-imf"
   },
   "dependencies": {
     "pg": "^8.11.0",
@@ -54,7 +59,9 @@
     "n8n",
     "automation",
     "multi-source",
-    "data-integration"
+    "data-integration",
+    "tri-source",
+    "economic-intelligence"
   ],
   "author": "Eric Markowski",
   "license": "MIT",
