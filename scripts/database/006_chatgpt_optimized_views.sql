@@ -1,4 +1,4 @@
--- ChatGPT-Optimized Database Views (SIMPLIFIED)
+-- ChatGPT-Optimized Database Views (FIXED INDICATOR CODES)
 -- Migration: 006_chatgpt_optimized_views.sql
 
 -- 1. Country Profile View for ChatGPT
@@ -7,7 +7,7 @@ SELECT
     cm.unified_code as country_code,
     cm.country_name,
     
-    -- Latest Economic Indicators (World Bank)
+    -- Latest Economic Indicators (World Bank) - FIXED CODES
     latest_gdp.value as latest_gdp_growth,
     latest_gdp.year as gdp_year,
     latest_gdp_per_capita.value as gdp_per_capita,
@@ -20,7 +20,7 @@ SELECT
     latest_patents.obs_value as patent_applications,
     latest_hightech_exports.value as hightech_exports_pct,
     
-    -- Trade Indicators (World Bank)
+    -- Trade Indicators (World Bank) - FIXED CODES
     latest_trade_balance.value as trade_balance,
     latest_exports.value as exports_growth,
     latest_imports.value as imports_growth,
@@ -57,107 +57,107 @@ SELECT
     
 FROM country_mappings cm
 
--- Latest GDP Growth Rate
+-- Latest GDP Growth Rate (WORKING)
 LEFT JOIN (
     SELECT DISTINCT ON (country_code) 
         country_code, value, year
     FROM indicators 
-    WHERE indicator_code = 'NY.GDP.MKTP.KD.ZG' 
+    WHERE indicator_code = 'NY.GDP.MKTP.KD.ZG'  -- CORRECT CODE
     AND value IS NOT NULL
     ORDER BY country_code, year DESC
 ) latest_gdp ON cm.wb_code = latest_gdp.country_code
 
--- Latest GDP Per Capita
+-- Latest GDP Per Capita (FIXED)
 LEFT JOIN (
     SELECT DISTINCT ON (country_code) 
         country_code, value, year
     FROM indicators 
-    WHERE indicator_code = 'NY.GDP.PCAP.CD' 
+    WHERE indicator_code = 'NY.GDP.PCAP.KD'  -- FIXED: Was NY.GDP.PCAP.CD
     AND value IS NOT NULL
     ORDER BY country_code, year DESC
 ) latest_gdp_per_capita ON cm.wb_code = latest_gdp_per_capita.country_code
 
--- Latest Inflation Rate
+-- Latest Inflation Rate (WORKING)
 LEFT JOIN (
     SELECT DISTINCT ON (country_code) 
         country_code, value, year
     FROM indicators 
-    WHERE indicator_code = 'FP.CPI.TOTL.ZG' 
+    WHERE indicator_code = 'FP.CPI.TOTL.ZG'  -- CORRECT CODE
     AND value IS NOT NULL
     ORDER BY country_code, year DESC
 ) latest_inflation ON cm.wb_code = latest_inflation.country_code
 
--- Latest Unemployment Rate
+-- Latest Unemployment Rate (WORKING)
 LEFT JOIN (
     SELECT DISTINCT ON (country_code) 
         country_code, value, year
     FROM indicators 
-    WHERE indicator_code = 'SL.UEM.TOTL.ZS' 
+    WHERE indicator_code = 'SL.UEM.TOTL.ZS'  -- CORRECT CODE
     AND value IS NOT NULL
     ORDER BY country_code, year DESC
 ) latest_unemployment ON cm.wb_code = latest_unemployment.country_code
 
--- Latest R&D Spending (OECD)
+-- Latest R&D Spending (OECD) - Check if this code exists
 LEFT JOIN (
     SELECT DISTINCT ON (country_code) 
         country_code, obs_value, time_period
     FROM oecd_indicators 
-    WHERE indicator_code = 'GERD_PC' 
+    WHERE indicator_code = 'GERD_PC'  -- May need to be changed
     AND obs_value IS NOT NULL
     ORDER BY country_code, time_period DESC
 ) latest_rd_spending ON cm.oecd_code = latest_rd_spending.country_code
 
--- Latest Patent Applications (OECD)
+-- Latest Patent Applications (OECD) - Check if this code exists
 LEFT JOIN (
     SELECT DISTINCT ON (country_code) 
         country_code, obs_value, time_period
     FROM oecd_indicators 
-    WHERE indicator_code = 'PAT_APP' 
+    WHERE indicator_code = 'PAT_APP'  -- May need to be changed
     AND obs_value IS NOT NULL
     ORDER BY country_code, time_period DESC
 ) latest_patents ON cm.oecd_code = latest_patents.country_code
 
--- Latest High-tech Exports
+-- Latest High-tech Exports (FIXED)
 LEFT JOIN (
     SELECT DISTINCT ON (country_code) 
         country_code, value, year
     FROM indicators 
-    WHERE indicator_code = 'TX.VAL.TECH.CD' 
+    WHERE indicator_code = 'TX.VAL.TECH.MF.ZS'  -- FIXED: Was TX.VAL.TECH.CD
     AND value IS NOT NULL
     ORDER BY country_code, year DESC
 ) latest_hightech_exports ON cm.wb_code = latest_hightech_exports.country_code
 
--- Latest Trade Balance
+-- Latest Trade Balance (FIXED)
 LEFT JOIN (
     SELECT DISTINCT ON (country_code) 
         country_code, value, year
     FROM indicators 
-    WHERE indicator_code = 'NE.RSB.GNFS.CD' 
+    WHERE indicator_code = 'BN.CAB.XOKA.GD.ZS'  -- FIXED: Using Current Account Balance
     AND value IS NOT NULL
     ORDER BY country_code, year DESC
 ) latest_trade_balance ON cm.wb_code = latest_trade_balance.country_code
 
--- Latest Exports Growth
+-- Latest Exports Growth (FIXED)
 LEFT JOIN (
     SELECT DISTINCT ON (country_code) 
         country_code, value, year
     FROM indicators 
-    WHERE indicator_code = 'NE.EXP.GNFS.KD.ZG' 
+    WHERE indicator_code = 'NE.EXP.GNFS.ZS'  -- FIXED: Using Exports % of GDP
     AND value IS NOT NULL
     ORDER BY country_code, year DESC
 ) latest_exports ON cm.wb_code = latest_exports.country_code
 
--- Latest Imports Growth
+-- Latest Imports Growth (FIXED)
 LEFT JOIN (
     SELECT DISTINCT ON (country_code) 
         country_code, value, year
     FROM indicators 
-    WHERE indicator_code = 'NE.IMP.GNFS.KD.ZG' 
+    WHERE indicator_code = 'NE.IMP.GNFS.ZS'  -- FIXED: Using Imports % of GDP
     AND value IS NOT NULL
     ORDER BY country_code, year DESC
 ) latest_imports ON cm.wb_code = latest_imports.country_code
 
--- Latest IMF Government Debt
+-- Latest IMF Government Debt (WORKING)
 LEFT JOIN (
     SELECT DISTINCT ON (weo_country_code) 
         weo_country_code, value, year
@@ -167,7 +167,7 @@ LEFT JOIN (
     ORDER BY weo_country_code, year DESC
 ) latest_imf_debt ON cm.imf_code = latest_imf_debt.weo_country_code
 
--- Latest IMF Fiscal Deficit
+-- Latest IMF Fiscal Deficit (WORKING)
 LEFT JOIN (
     SELECT DISTINCT ON (weo_country_code) 
         weo_country_code, value, year
@@ -213,7 +213,7 @@ LEFT JOIN (
 
 ORDER BY cm.country_name;
 
--- 2. Industry Analysis View for ChatGPT (SIMPLIFIED)
+-- 2. Industry Analysis View for ChatGPT (UNCHANGED)
 CREATE MATERIALIZED VIEW chatgpt_industry_analysis AS
 SELECT 
     i.industry,
@@ -250,7 +250,7 @@ AND i.value IS NOT NULL
 GROUP BY i.industry, i.country_code, i.country_name
 ORDER BY i.industry, data_richness_rank;
 
--- 3. Historical Trends View for ChatGPT (SIMPLIFIED)
+-- 3. Historical Trends View for ChatGPT (UNCHANGED)
 CREATE MATERIALIZED VIEW chatgpt_historical_trends AS
 SELECT 
     country_code,
