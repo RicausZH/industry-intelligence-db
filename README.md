@@ -57,6 +57,17 @@ This tri-source economic intelligence platform rivals professional systems costi
 
 ## 🚀 **Quick Start**
 
+## Full Documentation 
+
+Check folder:
+/documentation
+  - api.html
+  - architecture.html
+  - database_schema.html
+  - deployment.html
+  - development.html
+ 
+    
 ### Prerequisites
 - Node.js 18+
 - PostgreSQL database
