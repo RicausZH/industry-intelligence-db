@@ -33,7 +33,21 @@
     "complete-integration": "npm run process-wb-enhanced && npm run process-oecd && npm run process-imf",
 
     "validate": "node scripts/validation/validate-data-integrity.js",
-    "health-check": "npm run verify && npm run validate"
+    "health-check": "npm run verify && npm run validate",
+
+    "create-chatgpt-views": "node scripts/database/create-chatgpt-views.js",
+    "add-confidence-scoring": "node scripts/utils/confidence-scoring.js",
+    "refresh-chatgpt-views": "node scripts/database/refresh-chatgpt-views.js",
+    "test-chatgpt-integration": "node scripts/validation/test-chatgpt-views.js",
+    "format-for-chatgpt": "node scripts/utils/chatgpt-data-formatter.js",
+    
+    "chatgpt-setup": "npm run create-chatgpt-views && npm run add-confidence-scoring",
+    "chatgpt-health-check": "npm run test-chatgpt-integration",
+    "chatgpt-refresh-manual": "npm run refresh-chatgpt-views",
+    
+    "chatgpt-country-profile": "node -e \"const f = require('./scripts/utils/chatgpt-data-formatter'); f.getCountryProfile(process.argv[1]).then(r => console.log(JSON.stringify(r, null, 2)))\"",
+    "chatgpt-industry-analysis": "node -e \"const f = require('./scripts/utils/chatgpt-data-formatter'); f.getIndustryAnalysis(process.argv[1]).then(r => console.log(JSON.stringify(r, null, 2)))\"",
+    "chatgpt-historical-trends": "node -e \"const f = require('./scripts/utils/chatgpt-data-formatter'); f.getHistoricalTrends(process.argv[1]).then(r => console.log(JSON.stringify(r, null, 2)))\""
   },
   "dependencies": {
     "pg": "^8.11.0",
