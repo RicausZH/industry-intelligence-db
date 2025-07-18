@@ -7,6 +7,7 @@
     "start": "node server.js",
     "setup": "node scripts/setup-db.js",
     "setup-db": "node scripts/setup-db.js",
+    "process-imf-weo": "node scripts/process-imf-weo.js",
     "populate-imf-mappings": "node scripts/populate-imf-mappings.js",
     "process-oecd": "node scripts/process-oecd-msti.js",
     "populate-oecd-mappings-fixed": "node scripts/populate-oecd-mappings-fixed.js",
