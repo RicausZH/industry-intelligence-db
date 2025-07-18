@@ -257,7 +257,7 @@ const OECD_COUNTRY_MAPPINGS = {
   'RUS': 'RUS', 'SGP': 'SGP', 'ZAF': 'ZAF', 'TWN': 'TWN'
 };
 
-// Update country mappings with OECD codes
+// Update country mappings with OECD codes (FIXED - no updated_at column)
 async function updateCountryMappingsWithOECD() {
   const client = await pool.connect();
   
@@ -269,7 +269,7 @@ async function updateCountryMappingsWithOECD() {
     for (const [wbCode, oecdCode] of Object.entries(OECD_COUNTRY_MAPPINGS)) {
       const result = await client.query(`
         UPDATE country_mappings 
-        SET oecd_code = $1, updated_at = CURRENT_TIMESTAMP
+        SET oecd_code = $1
         WHERE wb_code = $2 OR unified_code = $2
         RETURNING unified_code, country_name
       `, [oecdCode, wbCode]);
@@ -305,7 +305,7 @@ async function updateCountryMappingsWithOECD() {
   }
 }
 
-// Add OECD indicator mappings
+// Add OECD indicator mappings (FIXED - no updated_at column)
 async function addOECDIndicatorMappings() {
   const client = await pool.connect();
   
@@ -331,8 +331,7 @@ async function addOECDIndicatorMappings() {
           await client.query(`
             UPDATE indicator_mappings 
             SET unified_concept = $1, concept_description = $2, 
-                priority_source = CASE WHEN priority_source = 'WB' THEN 'WB' ELSE 'OECD' END,
-                updated_at = CURRENT_TIMESTAMP
+                priority_source = CASE WHEN priority_source = 'WB' THEN 'WB' ELSE 'OECD' END
             WHERE oecd_code = $3 AND industry = $4
           `, [unifiedConcept, details.description, oecdCode, industry]);
           
@@ -346,8 +345,7 @@ async function addOECDIndicatorMappings() {
             ON CONFLICT (unified_concept) DO UPDATE SET
               oecd_code = EXCLUDED.oecd_code,
               concept_description = EXCLUDED.concept_description,
-              priority_source = EXCLUDED.priority_source,
-              updated_at = CURRENT_TIMESTAMP
+              priority_source = EXCLUDED.priority_source
           `, [unifiedConcept, details.description, details.wb_equivalent, oecdCode, 'OECD', industry]);
           
           console.log(`   ✅ Added: ${oecdCode} → ${details.name}`);
