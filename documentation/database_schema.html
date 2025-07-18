@@ -1,0 +1,1231 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DATABASE_SCHEMA.md - Complete Database Schema Documentation</title>
+    <style>
+        body {
+            max-width: 880px;
+            margin: 0 auto;
+            padding: 32px 80px;
+            position: relative;
+            box-sizing: border-box;
+            font-family: 'Times New Roman', serif;
+            line-height: 1.6;
+            color: #000;
+            background: #fff;
+        }
+        
+        h1 {
+            font-size: 24px;
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 32px;
+            border-bottom: 2px solid #000;
+            padding-bottom: 16px;
+        }
+        
+        h2 {
+            font-size: 20px;
+            font-weight: bold;
+            margin-top: 32px;
+            margin-bottom: 16px;
+            color: #000;
+        }
+        
+        h3 {
+            font-size: 16px;
+            font-weight: bold;
+            margin-top: 24px;
+            margin-bottom: 12px;
+            color: #000;
+        }
+        
+        h4 {
+            font-size: 14px;
+            font-weight: bold;
+            margin-top: 20px;
+            margin-bottom: 8px;
+            color: #000;
+        }
+        
+        p {
+            margin-bottom: 16px;
+            text-align: justify;
+        }
+        
+        ul, ol {
+            margin-bottom: 16px;
+            padding-left: 40px;
+        }
+        
+        li {
+            margin-bottom: 8px;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 24px;
+            font-size: 12px;
+        }
+        
+        th, td {
+            border: 1px solid #000;
+            padding: 8px;
+            text-align: left;
+            vertical-align: top;
+        }
+        
+        th {
+            background-color: #f5f5f5;
+            font-weight: bold;
+        }
+        
+        code {
+            font-family: 'Courier New', monospace;
+            font-size: 11px;
+            background-color: #f8f8f8;
+            padding: 2px 4px;
+            border: 1px solid #ddd;
+        }
+        
+        pre {
+            font-family: 'Courier New', monospace;
+            font-size: 11px;
+            background-color: #f8f8f8;
+            padding: 16px;
+            border: 1px solid #ddd;
+            margin-bottom: 16px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        
+        .table-container {
+            margin-bottom: 24px;
+        }
+        
+        .schema-overview {
+            background-color: #f9f9f9;
+            padding: 16px;
+            border: 1px solid #ccc;
+            margin-bottom: 24px;
+        }
+        
+        .note {
+            background-color: #fff8dc;
+            padding: 12px;
+            border-left: 4px solid #ffd700;
+            margin-bottom: 16px;
+            font-style: italic;
+        }
+        
+        .warning {
+            background-color: #ffe4e1;
+            padding: 12px;
+            border-left: 4px solid #ff6b6b;
+            margin-bottom: 16px;
+        }
+    </style>
+</head>
+<body>
+    <h1>DATABASE SCHEMA DOCUMENTATION</h1>
+    <h2>Tri-Source Economic Intelligence Platform</h2>
+    
+    <div class="schema-overview">
+        <h3>Database Overview</h3>
+        <p><strong>Platform:</strong> PostgreSQL 13+ on Railway</p>
+        <p><strong>Total Records:</strong> 780,525+</p>
+        <p><strong>Data Sources:</strong> World Bank, OECD, IMF</p>
+        <p><strong>Countries:</strong> 267</p>
+        <p><strong>Industries:</strong> 12</p>
+        <p><strong>Time Range:</strong> 1980-2030</p>
+        <p><strong>Last Updated:</strong> July 2025</p>
+    </div>
+
+    <h2>1. Core Data Tables</h2>
+
+    <h3>1.1 World Bank Data Table</h3>
+    <h4>Table: <code>indicators</code></h4>
+    <p>Primary data table containing World Bank World Development Indicators. This is the foundational table with 515,565 records.</p>
+
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>Column Name</th>
+                    <th>Data Type</th>
+                    <th>Constraints</th>
+                    <th>Description</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>id</td>
+                    <td>SERIAL</td>
+                    <td>PRIMARY KEY</td>
+                    <td>Auto-incrementing unique identifier</td>
+                </tr>
+                <tr>
+                    <td>country_code</td>
+                    <td>VARCHAR(3)</td>
+                    <td>NOT NULL</td>
+                    <td>ISO 3-letter country code</td>
+                </tr>
+                <tr>
+                    <td>country_name</td>
+                    <td>VARCHAR(100)</td>
+                    <td>NOT NULL</td>
+                    <td>Full country name</td>
+                </tr>
+                <tr>
+                    <td>indicator_code</td>
+                    <td>VARCHAR(50)</td>
+                    <td>NOT NULL</td>
+                    <td>World Bank indicator code</td>
+                </tr>
+                <tr>
+                    <td>indicator_name</td>
+                    <td>VARCHAR(255)</td>
+                    <td>NOT NULL</td>
+                    <td>Human-readable indicator name</td>
+                </tr>
+                <tr>
+                    <td>year</td>
+                    <td>INTEGER</td>
+                    <td>NOT NULL</td>
+                    <td>Data year (1980-2030)</td>
+                </tr>
+                <tr>
+                    <td>value</td>
+                    <td>DECIMAL(15,4)</td>
+                    <td>NULL</td>
+                    <td>Indicator value (nullable for missing data)</td>
+                </tr>
+                <tr>
+                    <td>industry</td>
+                    <td>VARCHAR(20)</td>
+                    <td>NULL</td>
+                    <td>Industry classification</td>
+                </tr>
+                <tr>
+                    <td>source</td>
+                    <td>VARCHAR(10)</td>
+                    <td>DEFAULT 'WB'</td>
+                    <td>Data source identifier</td>
+                </tr>
+                <tr>
+                    <td>data_quality_score</td>
+                    <td>INTEGER</td>
+                    <td>DEFAULT 5</td>
+                    <td>Quality score (1-5, 5 being highest)</td>
+                </tr>
+                <tr>
+                    <td>created_at</td>
+                    <td>TIMESTAMP</td>
+                    <td>DEFAULT CURRENT_TIMESTAMP</td>
+                    <td>Record creation timestamp</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <h3>1.2 OECD Data Table</h3>
+    <h4>Table: <code>oecd_indicators</code></h4>
+    <p>OECD Main Science and Technology Indicators data. Contains 138,086 records focused on innovation and development metrics.</p>
+
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>Column Name</th>
+                    <th>Data Type</th>
+                    <th>Constraints</th>
+                    <th>Description</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>id</td>
+                    <td>SERIAL</td>
+                    <td>PRIMARY KEY</td>
+                    <td>Auto-incrementing unique identifier</td>
+                </tr>
+                <tr>
+                    <td>dataflow</td>
+                    <td>VARCHAR(50)</td>
+                    <td>NULL</td>
+                    <td>OECD dataflow identifier</td>
+                </tr>
+                <tr>
+                    <td>country_code</td>
+                    <td>VARCHAR(3)</td>
+                    <td>NOT NULL</td>
+                    <td>ISO 3-letter country code</td>
+                </tr>
+                <tr>
+                    <td>indicator_code</td>
+                    <td>VARCHAR(50)</td>
+                    <td>NOT NULL</td>
+                    <td>OECD indicator code</td>
+                </tr>
+                <tr>
+                    <td>time_period</td>
+                    <td>VARCHAR(20)</td>
+                    <td>NOT NULL</td>
+                    <td>Time period (year or quarter)</td>
+                </tr>
+                <tr>
+                    <td>obs_value</td>
+                    <td>DECIMAL(15,4)</td>
+                    <td>NULL</td>
+                    <td>Observed value</td>
+                </tr>
+                <tr>
+                    <td>industry</td>
+                    <td>VARCHAR(20)</td>
+                    <td>NULL</td>
+                    <td>Industry classification</td>
+                </tr>
+                <tr>
+                    <td>source</td>
+                    <td>VARCHAR(10)</td>
+                    <td>DEFAULT 'OECD'</td>
+                    <td>Data source identifier</td>
+                </tr>
+                <tr>
+                    <td>data_quality_score</td>
+                    <td>INTEGER</td>
+                    <td>DEFAULT 4</td>
+                    <td>Quality score (1-5)</td>
+                </tr>
+                <tr>
+                    <td>created_at</td>
+                    <td>TIMESTAMP</td>
+                    <td>DEFAULT CURRENT_TIMESTAMP</td>
+                    <td>Record creation timestamp</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <h3>1.3 IMF Data Table</h3>
+    <h4>Table: <code>imf_indicators</code></h4>
+    <p>IMF World Economic Outlook data. Contains 126,874 records with macro-financial and fiscal indicators.</p>
+
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>Column Name</th>
+                    <th>Data Type</th>
+                    <th>Constraints</th>
+                    <th>Description</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>id</td>
+                    <td>SERIAL</td>
+                    <td>PRIMARY KEY</td>
+                    <td>Auto-incrementing unique identifier</td>
+                </tr>
+                <tr>
+                    <td>weo_country_code</td>
+                    <td>VARCHAR(10)</td>
+                    <td>NOT NULL</td>
+                    <td>IMF WEO country code</td>
+                </tr>
+                <tr>
+                    <td>subject_code</td>
+                    <td>VARCHAR(20)</td>
+                    <td>NOT NULL</td>
+                    <td>IMF subject/indicator code</td>
+                </tr>
+                <tr>
+                    <td>year</td>
+                    <td>INTEGER</td>
+                    <td>NOT NULL</td>
+                    <td>Data year</td>
+                </tr>
+                <tr>
+                    <td>value</td>
+                    <td>DECIMAL(15,4)</td>
+                    <td>NULL</td>
+                    <td>Indicator value</td>
+                </tr>
+                <tr>
+                    <td>units</td>
+                    <td>VARCHAR(50)</td>
+                    <td>NULL</td>
+                    <td>Measurement units</td>
+                </tr>
+                <tr>
+                    <td>industry</td>
+                    <td>VARCHAR(20)</td>
+                    <td>NULL</td>
+                    <td>Industry classification</td>
+                </tr>
+                <tr>
+                    <td>source</td>
+                    <td>VARCHAR(10)</td>
+                    <td>DEFAULT 'IMF'</td>
+                    <td>Data source identifier</td>
+                </tr>
+                <tr>
+                    <td>data_quality_score</td>
+                    <td>INTEGER</td>
+                    <td>DEFAULT 4</td>
+                    <td>Quality score (1-5)</td>
+                </tr>
+                <tr>
+                    <td>created_at</td>
+                    <td>TIMESTAMP</td>
+                    <td>DEFAULT CURRENT_TIMESTAMP</td>
+                    <td>Record creation timestamp</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <h2>2. Mapping Tables</h2>
+
+    <h3>2.1 Country Mappings</h3>
+    <h4>Table: <code>country_mappings</code></h4>
+    <p>Unified country code mappings across all three data sources. Essential for cross-source analysis.</p>
+
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>Column Name</th>
+                    <th>Data Type</th>
+                    <th>Constraints</th>
+                    <th>Description</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>unified_code</td>
+                    <td>VARCHAR(3)</td>
+                    <td>PRIMARY KEY</td>
+                    <td>Unified country code (ISO 3-letter)</td>
+                </tr>
+                <tr>
+                    <td>country_name</td>
+                    <td>VARCHAR(100)</td>
+                    <td>NOT NULL</td>
+                    <td>Standard country name</td>
+                </tr>
+                <tr>
+                    <td>wb_code</td>
+                    <td>VARCHAR(3)</td>
+                    <td>NULL</td>
+                    <td>World Bank country code</td>
+                </tr>
+                <tr>
+                    <td>oecd_code</td>
+                    <td>VARCHAR(3)</td>
+                    <td>NULL</td>
+                    <td>OECD country code</td>
+                </tr>
+                <tr>
+                    <td>imf_code</td>
+                    <td>VARCHAR(10)</td>
+                    <td>NULL</td>
+                    <td>IMF country code</td>
+                </tr>
+                <tr>
+                    <td>priority_source</td>
+                    <td>VARCHAR(10)</td>
+                    <td>DEFAULT 'WB'</td>
+                    <td>Preferred data source for this country</td>
+                </tr>
+                <tr>
+                    <td>created_at</td>
+                    <td>TIMESTAMP</td>
+                    <td>DEFAULT CURRENT_TIMESTAMP</td>
+                    <td>Record creation timestamp</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <h3>2.2 Indicator Mappings</h3>
+    <h4>Table: <code>indicator_mappings</code></h4>
+    <p>Cross-source indicator mappings enabling unified analysis across World Bank, OECD, and IMF data.</p>
+
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>Column Name</th>
+                    <th>Data Type</th>
+                    <th>Constraints</th>
+                    <th>Description</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>unified_concept</td>
+                    <td>VARCHAR(255)</td>
+                    <td>PRIMARY KEY</td>
+                    <td>Unified concept identifier</td>
+                </tr>
+                <tr>
+                    <td>concept_description</td>
+                    <td>TEXT</td>
+                    <td>NULL</td>
+                    <td>Detailed description of the concept</td>
+                </tr>
+                <tr>
+                    <td>wb_code</td>
+                    <td>VARCHAR(50)</td>
+                    <td>NULL</td>
+                    <td>World Bank indicator code</td>
+                </tr>
+                <tr>
+                    <td>oecd_code</td>
+                    <td>VARCHAR(50)</td>
+                    <td>NULL</td>
+                    <td>OECD indicator code</td>
+                </tr>
+                <tr>
+                    <td>imf_code</td>
+                    <td>VARCHAR(50)</td>
+                    <td>NULL</td>
+                    <td>IMF indicator code</td>
+                </tr>
+                <tr>
+                    <td>priority_source</td>
+                    <td>VARCHAR(10)</td>
+                    <td>DEFAULT 'WB'</td>
+                    <td>Preferred data source for this indicator</td>
+                </tr>
+                <tr>
+                    <td>industry</td>
+                    <td>VARCHAR(20)</td>
+                    <td>NULL</td>
+                    <td>Industry classification</td>
+                </tr>
+                <tr>
+                    <td>created_at</td>
+                    <td>TIMESTAMP</td>
+                    <td>DEFAULT CURRENT_TIMESTAMP</td>
+                    <td>Record creation timestamp</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <h2>3. Metadata Tables</h2>
+
+    <h3>3.1 Data Sources</h3>
+    <h4>Table: <code>data_sources</code></h4>
+    <p>Metadata about each data source including quality ratings and update frequencies.</p>
+
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>Column Name</th>
+                    <th>Data Type</th>
+                    <th>Constraints</th>
+                    <th>Description</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>source_code</td>
+                    <td>VARCHAR(10)</td>
+                    <td>PRIMARY KEY</td>
+                    <td>Source identifier (WB, OECD, IMF)</td>
+                </tr>
+                <tr>
+                    <td>source_name</td>
+                    <td>VARCHAR(100)</td>
+                    <td>NOT NULL</td>
+                    <td>Full source name</td>
+                </tr>
+                <tr>
+                    <td>description</td>
+                    <td>TEXT</td>
+                    <td>NULL</td>
+                    <td>Source description</td>
+                </tr>
+                <tr>
+                    <td>base_url</td>
+                    <td>VARCHAR(200)</td>
+                    <td>NULL</td>
+                    <td>Base URL for data access</td>
+                </tr>
+                <tr>
+                    <td>update_frequency</td>
+                    <td>VARCHAR(50)</td>
+                    <td>NULL</td>
+                    <td>How often data is updated</td>
+                </tr>
+                <tr>
+                    <td>data_quality_score</td>
+                    <td>INTEGER</td>
+                    <td>DEFAULT 5</td>
+                    <td>Overall quality score (1-5)</td>
+                </tr>
+                <tr>
+                    <td>last_updated</td>
+                    <td>TIMESTAMP</td>
+                    <td>NULL</td>
+                    <td>Last data update timestamp</td>
+                </tr>
+                <tr>
+                    <td>created_at</td>
+                    <td>TIMESTAMP</td>
+                    <td>DEFAULT CURRENT_TIMESTAMP</td>
+                    <td>Record creation timestamp</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <h3>3.2 Countries</h3>
+    <h4>Table: <code>countries</code></h4>
+    <p>Comprehensive country metadata including regional classifications and development status.</p>
+
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>Column Name</th>
+                    <th>Data Type</th>
+                    <th>Constraints</th>
+                    <th>Description</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>country_code</td>
+                    <td>VARCHAR(3)</td>
+                    <td>PRIMARY KEY</td>
+                    <td>ISO 3-letter country code</td>
+                </tr>
+                <tr>
+                    <td>country_name</td>
+                    <td>VARCHAR(100)</td>
+                    <td>NOT NULL</td>
+                    <td>Official country name</td>
+                </tr>
+                <tr>
+                    <td>region</td>
+                    <td>VARCHAR(50)</td>
+                    <td>NULL</td>
+                    <td>Geographic region</td>
+                </tr>
+                <tr>
+                    <td>income_group</td>
+                    <td>VARCHAR(30)</td>
+                    <td>NULL</td>
+                    <td>World Bank income classification</td>
+                </tr>
+                <tr>
+                    <td>development_status</td>
+                    <td>VARCHAR(30)</td>
+                    <td>NULL</td>
+                    <td>Development status classification</td>
+                </tr>
+                <tr>
+                    <td>iso_numeric</td>
+                    <td>VARCHAR(3)</td>
+                    <td>NULL</td>
+                    <td>ISO numeric country code</td>
+                </tr>
+                <tr>
+                    <td>iso_alpha_2</td>
+                    <td>VARCHAR(2)</td>
+                    <td>NULL</td>
+                    <td>ISO 2-letter country code</td>
+                </tr>
+                <tr>
+                    <td>capital_city</td>
+                    <td>VARCHAR(100)</td>
+                    <td>NULL</td>
+                    <td>Capital city name</td>
+                </tr>
+                <tr>
+                    <td>created_at</td>
+                    <td>TIMESTAMP</td>
+                    <td>DEFAULT CURRENT_TIMESTAMP</td>
+                    <td>Record creation timestamp</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <h3>3.3 Indicator Metadata</h3>
+    <h4>Table: <code>indicator_metadata</code></h4>
+    <p>Detailed metadata for World Bank indicators including units, methodologies, and data sources.</p>
+
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>Column Name</th>
+                    <th>Data Type</th>
+                    <th>Constraints</th>
+                    <th>Description</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>code</td>
+                    <td>VARCHAR(50)</td>
+                    <td>PRIMARY KEY</td>
+                    <td>Indicator code</td>
+                </tr>
+                <tr>
+                    <td>name</td>
+                    <td>VARCHAR(255)</td>
+                    <td>NOT NULL</td>
+                    <td>Indicator name</td>
+                </tr>
+                <tr>
+                    <td>description</td>
+                    <td>TEXT</td>
+                    <td>NULL</td>
+                    <td>Detailed description</td>
+                </tr>
+                <tr>
+                    <td>unit</td>
+                    <td>VARCHAR(50)</td>
+                    <td>NULL</td>
+                    <td>Unit of measurement</td>
+                </tr>
+                <tr>
+                    <td>source_note</td>
+                    <td>TEXT</td>
+                    <td>NULL</td>
+                    <td>Source methodology notes</td>
+                </tr>
+                <tr>
+                    <td>source_organization</td>
+                    <td>TEXT</td>
+                    <td>NULL</td>
+                    <td>Source organization</td>
+                </tr>
+                <tr>
+                    <td>created_at</td>
+                    <td>TIMESTAMP</td>
+                    <td>DEFAULT CURRENT_TIMESTAMP</td>
+                    <td>Record creation timestamp</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <h2>4. Supporting Tables</h2>
+
+    <h3>4.1 Country Indicator Availability</h3>
+    <h4>Table: <code>country_indicator_availability</code></h4>
+    <p>Tracks data availability by country and indicator for completeness analysis.</p>
+
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>Column Name</th>
+                    <th>Data Type</th>
+                    <th>Constraints</th>
+                    <th>Description</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>id</td>
+                    <td>SERIAL</td>
+                    <td>PRIMARY KEY</td>
+                    <td>Auto-incrementing identifier</td>
+                </tr>
+                <tr>
+                    <td>country_code</td>
+                    <td>VARCHAR(3)</td>
+                    <td>NOT NULL</td>
+                    <td>Country code</td>
+                </tr>
+                <tr>
+                    <td>indicator_code</td>
+                    <td>VARCHAR(50)</td>
+                    <td>NOT NULL</td>
+                    <td>Indicator code</td>
+                </tr>
+                <tr>
+                    <td>first_year</td>
+                    <td>INTEGER</td>
+                    <td>NULL</td>
+                    <td>First year with data</td>
+                </tr>
+                <tr>
+                    <td>last_year</td>
+                    <td>INTEGER</td>
+                    <td>NULL</td>
+                    <td>Last year with data</td>
+                </tr>
+                <tr>
+                    <td>total_years</td>
+                    <td>INTEGER</td>
+                    <td>NULL</td>
+                    <td>Total years with data</td>
+                </tr>
+                <tr>
+                    <td>completeness_score</td>
+                    <td>DECIMAL(5,2)</td>
+                    <td>NULL</td>
+                    <td>Completeness percentage</td>
+                </tr>
+                <tr>
+                    <td>created_at</td>
+                    <td>TIMESTAMP</td>
+                    <td>DEFAULT CURRENT_TIMESTAMP</td>
+                    <td>Record creation timestamp</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <h2>5. Views and Materialized Views</h2>
+
+    <h3>5.1 Latest Indicators View</h3>
+    <h4>View: <code>latest_indicators</code></h4>
+    <p>Provides the most recent data point for each country-indicator combination across all sources.</p>
+
+    <pre><code>CREATE VIEW latest_indicators AS
+SELECT DISTINCT ON (country_code, indicator_code)
+    country_code,
+    indicator_code,
+    indicator_name,
+    year,
+    value,
+    industry,
+    source,
+    data_quality_score
+FROM (
+    SELECT country_code, indicator_code, indicator_name, year, value, industry, source, data_quality_score
+    FROM indicators
+    WHERE value IS NOT NULL
+    UNION ALL
+    SELECT country_code, indicator_code, 'OECD Indicator', CAST(time_period AS INTEGER), obs_value, industry, source, data_quality_score
+    FROM oecd_indicators
+    WHERE obs_value IS NOT NULL
+    UNION ALL
+    SELECT 
+        cm.unified_code as country_code,
+        subject_code as indicator_code,
+        'IMF Indicator',
+        year,
+        value,
+        industry,
+        source,
+        data_quality_score
+    FROM imf_indicators i
+    JOIN country_mappings cm ON i.weo_country_code = cm.imf_code
+    WHERE value IS NOT NULL
+) combined_data
+ORDER BY country_code, indicator_code, year DESC;</code></pre>
+
+    <h3>5.2 Industry Summary View</h3>
+    <h4>View: <code>industry_summary</code></h4>
+    <p>Aggregated statistics by industry across all data sources.</p>
+
+    <pre><code>CREATE VIEW industry_summary AS
+SELECT 
+    industry,
+    COUNT(*) as total_records,
+    COUNT(DISTINCT country_code) as country_count,
+    COUNT(DISTINCT indicator_code) as indicator_count,
+    MIN(year) as earliest_year,
+    MAX(year) as latest_year,
+    AVG(value) as avg_value,
+    COUNT(CASE WHEN source = 'WB' THEN 1 END) as wb_records,
+    COUNT(CASE WHEN source = 'OECD' THEN 1 END) as oecd_records,
+    COUNT(CASE WHEN source = 'IMF' THEN 1 END) as imf_records
+FROM (
+    SELECT country_code, indicator_code, year, value, industry, source
+    FROM indicators
+    WHERE industry IS NOT NULL
+    UNION ALL
+    SELECT country_code, indicator_code, CAST(time_period AS INTEGER), obs_value, industry, source
+    FROM oecd_indicators
+    WHERE industry IS NOT NULL
+    UNION ALL
+    SELECT 
+        cm.unified_code as country_code,
+        subject_code as indicator_code,
+        year,
+        value,
+        industry,
+        source
+    FROM imf_indicators i
+    JOIN country_mappings cm ON i.weo_country_code = cm.imf_code
+    WHERE industry IS NOT NULL
+) combined_data
+GROUP BY industry
+ORDER BY total_records DESC;</code></pre>
+
+    <h3>5.3 Enhanced Indicator Summary View</h3>
+    <h4>View: <code>enhanced_indicator_summary</code></h4>
+    <p>Comprehensive indicator information with cross-source metadata.</p>
+
+    <pre><code>CREATE VIEW enhanced_indicator_summary AS
+SELECT 
+    im.unified_concept,
+    im.concept_description,
+    im.industry,
+    im.priority_source,
+    im.wb_code,
+    im.oecd_code,
+    im.imf_code,
+    imd.name as wb_name,
+    imd.description as wb_description,
+    imd.unit as wb_unit,
+    imd.source_organization as wb_source_org,
+    COUNT(*) as total_mappings,
+    COUNT(CASE WHEN im.wb_code IS NOT NULL THEN 1 END) as wb_available,
+    COUNT(CASE WHEN im.oecd_code IS NOT NULL THEN 1 END) as oecd_available,
+    COUNT(CASE WHEN im.imf_code IS NOT NULL THEN 1 END) as imf_available
+FROM indicator_mappings im
+LEFT JOIN indicator_metadata imd ON im.wb_code = imd.code
+GROUP BY im.unified_concept, im.concept_description, im.industry, im.priority_source,
+         im.wb_code, im.oecd_code, im.imf_code, imd.name, imd.description, imd.unit, imd.source_organization
+ORDER BY im.industry, im.unified_concept;</code></pre>
+
+    <h2>6. Indexes</h2>
+
+    <h3>6.1 Core Table Indexes</h3>
+    <h4>World Bank Indicators Table</h4>
+    <pre><code>-- Primary performance indexes
+CREATE INDEX idx_indicators_country_year ON indicators(country_code, year);
+CREATE INDEX idx_indicators_indicator_year ON indicators(indicator_code, year);
+CREATE INDEX idx_indicators_industry_year ON indicators(industry, year);
+CREATE INDEX idx_indicators_source_year ON indicators(source, year);
+CREATE INDEX idx_indicators_value_not_null ON indicators(value) WHERE value IS NOT NULL;
+
+-- Composite indexes for common queries
+CREATE INDEX idx_indicators_country_indicator_year ON indicators(country_code, indicator_code, year);
+CREATE INDEX idx_indicators_industry_country_year ON indicators(industry, country_code, year);
+CREATE INDEX idx_indicators_source_industry_year ON indicators(source, industry, year);</code></pre>
+
+    <h4>OECD Indicators Table</h4>
+    <pre><code>-- Primary performance indexes
+CREATE INDEX idx_oecd_country_indicator ON oecd_indicators(country_code, indicator_code);
+CREATE INDEX idx_oecd_time_period ON oecd_indicators(time_period);
+CREATE INDEX idx_oecd_industry_time ON oecd_indicators(industry, time_period);
+CREATE INDEX idx_oecd_source_time ON oecd_indicators(source, time_period);
+
+-- Composite indexes
+CREATE INDEX idx_oecd_country_indicator_time ON oecd_indicators(country_code, indicator_code, time_period);
+CREATE INDEX idx_oecd_industry_country_time ON oecd_indicators(industry, country_code, time_period);</code></pre>
+
+    <h4>IMF Indicators Table</h4>
+    <pre><code>-- Primary performance indexes
+CREATE INDEX idx_imf_country_indicator ON imf_indicators(weo_country_code, subject_code);
+CREATE INDEX idx_imf_year ON imf_indicators(year);
+CREATE INDEX idx_imf_industry_year ON imf_indicators(industry, year);
+CREATE INDEX idx_imf_source_year ON imf_indicators(source, year);
+
+-- Composite indexes
+CREATE INDEX idx_imf_country_indicator_year ON imf_indicators(weo_country_code, subject_code, year);
+CREATE INDEX idx_imf_industry_country_year ON imf_indicators(industry, weo_country_code, year);</code></pre>
+
+    <h3>6.2 Mapping Table Indexes</h3>
+    <pre><code>-- Country mappings
+CREATE INDEX idx_country_mappings_wb ON country_mappings(wb_code);
+CREATE INDEX idx_country_mappings_oecd ON country_mappings(oecd_code);
+CREATE INDEX idx_country_mappings_imf ON country_mappings(imf_code);
+
+-- Indicator mappings
+CREATE INDEX idx_indicator_mappings_wb ON indicator_mappings(wb_code);
+CREATE INDEX idx_indicator_mappings_oecd ON indicator_mappings(oecd_code);
+CREATE INDEX idx_indicator_mappings_imf ON indicator_mappings(imf_code);
+CREATE INDEX idx_indicator_mappings_industry ON indicator_mappings(industry);
+CREATE INDEX idx_indicator_mappings_priority ON indicator_mappings(priority_source);</code></pre>
+
+    <h2>7. Relationships and Constraints</h2>
+
+    <h3>7.1 Foreign Key Relationships</h3>
+    <div class="note">
+        <strong>Note:</strong> The current schema uses a flexible approach with logical relationships rather than enforced foreign keys to accommodate data quality issues and missing references across sources.
+    </div>
+
+    <h4>Logical Relationships</h4>
+    <ul>
+        <li><strong>indicators.country_code</strong> → <strong>countries.country_code</strong> (logical reference)</li>
+        <li><strong>indicators.indicator_code</strong> → <strong>indicator_metadata.code</strong> (logical reference)</li>
+        <li><strong>oecd_indicators.country_code</strong> → <strong>country_mappings.oecd_code</strong> (logical reference)</li>
+        <li><strong>imf_indicators.weo_country_code</strong> → <strong>country_mappings.imf_code</strong> (logical reference)</li>
+        <li><strong>indicator_mappings.wb_code</strong> → <strong>indicator_metadata.code</strong> (logical reference)</li>
+    </ul>
+
+    <h3>7.2 Data Integrity Constraints</h3>
+    <h4>Check Constraints</h4>
+    <pre><code>-- Year range constraints
+ALTER TABLE indicators ADD CONSTRAINT chk_indicators_year 
+    CHECK (year >= 1960 AND year <= 2035);
+
+ALTER TABLE oecd_indicators ADD CONSTRAINT chk_oecd_time_period 
+    CHECK (time_period ~ '^\d{4}$');
+
+ALTER TABLE imf_indicators ADD CONSTRAINT chk_imf_year 
+    CHECK (year >= 1980 AND year <= 2030);
+
+-- Quality score constraints
+ALTER TABLE indicators ADD CONSTRAINT chk_indicators_quality 
+    CHECK (data_quality_score >= 1 AND data_quality_score <= 5);
+
+ALTER TABLE oecd_indicators ADD CONSTRAINT chk_oecd_quality 
+    CHECK (data_quality_score >= 1 AND data_quality_score <= 5);
+
+ALTER TABLE imf_indicators ADD CONSTRAINT chk_imf_quality 
+    CHECK (data_quality_score >= 1 AND data_quality_score <= 5);
+
+-- Source constraints
+ALTER TABLE indicators ADD CONSTRAINT chk_indicators_source 
+    CHECK (source IN ('WB', 'OECD', 'IMF'));
+
+ALTER TABLE oecd_indicators ADD CONSTRAINT chk_oecd_source 
+    CHECK (source IN ('OECD'));
+
+ALTER TABLE imf_indicators ADD CONSTRAINT chk_imf_source 
+    CHECK (source IN ('IMF'));</code></pre>
+
+    <h2>8. Data Types and Validation</h2>
+
+    <h3>8.1 Numeric Data Handling</h3>
+    <div class="note">
+        <strong>Precision:</strong> All numeric values use DECIMAL(15,4) to maintain precision for both large values (trillions) and small percentages (basis points).
+    </div>
+
+    <h4>Value Ranges by Data Type</h4>
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>Data Type</th>
+                    <th>Range</th>
+                    <th>Precision</th>
+                    <th>Use Case</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>DECIMAL(15,4)</td>
+                    <td>±99,999,999,999.9999</td>
+                    <td>4 decimal places</td>
+                    <td>All indicator values</td>
+                </tr>
+                <tr>
+                    <td>INTEGER</td>
+                    <td>±2,147,483,647</td>
+                    <td>Whole numbers</td>
+                    <td>Years, counts, scores</td>
+                </tr>
+                <tr>
+                    <td>SERIAL</td>
+                    <td>1 to 2,147,483,647</td>
+                    <td>Auto-increment</td>
+                    <td>Primary keys</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <h3>8.2 String Data Handling</h3>
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>Field Type</th>
+                    <th>Length</th>
+                    <th>Validation</th>
+                    <th>Example</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Country Code</td>
+                    <td>VARCHAR(3)</td>
+                    <td>ISO 3-letter standard</td>
+                    <td>USA, DEU, JPN</td>
+                </tr>
+                <tr>
+                    <td>Indicator Code</td>
+                    <td>VARCHAR(50)</td>
+                    <td>Source-specific format</td>
+                    <td>NY.GDP.MKTP.CD</td>
+                </tr>
+                <tr>
+                    <td>Country Name</td>
+                    <td>VARCHAR(100)</td>
+                    <td>Unicode support</td>
+                    <td>United States</td>
+                </tr>
+                <tr>
+                    <td>Indicator Name</td>
+                    <td>VARCHAR(255)</td>
+                    <td>Full descriptive name</td>
+                    <td>GDP (current US$)</td>
+                </tr>
+                <tr>
+                    <td>Industry</td>
+                    <td>VARCHAR(20)</td>
+                    <td>Controlled vocabulary</td>
+                    <td>finance, innovation</td>
+                </tr>
+                <tr>
+                    <td>Description</td>
+                    <td>TEXT</td>
+                    <td>Unlimited length</td>
+                    <td>Detailed methodology</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <h2>9. Performance Considerations</h2>
+
+    <h3>9.1 Query Optimization</h3>
+    <div class="note">
+        <strong>Performance Target:</strong> All queries should complete within 500ms for interactive use and 5 seconds for complex analytical queries.
+    </div>
+
+    <h4>Common Query Patterns</h4>
+    <ul>
+        <li><strong>Time series by country:</strong> Heavily indexed on (country_code, year)</li>
+        <li><strong>Cross-country comparison:</strong> Optimized with (indicator_code, year) indexes</li>
+        <li><strong>Industry analysis:</strong> Indexed on (industry, year) combinations</li>
+        <li><strong>Latest data queries:</strong> Materialized view for best performance</li>
+    </ul>
+
+    <h3>9.2 Storage Optimization</h3>
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>Table</th>
+                    <th>Records</th>
+                    <th>Estimated Size</th>
+                    <th>Growth Rate</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>indicators</td>
+                    <td>515,565</td>
+                    <td>~45 MB</td>
+                    <td>~20K/year</td>
+                </tr>
+                <tr>
+                    <td>oecd_indicators</td>
+                    <td>138,086</td>
+                    <td>~12 MB</td>
+                    <td>~10K/quarter</td>
+                </tr>
+                <tr>
+                    <td>imf_indicators</td>
+                    <td>126,874</td>
+                    <td>~11 MB</td>
+                    <td>~5K/biannual</td>
+                </tr>
+                <tr>
+                    <td>Indexes</td>
+                    <td>-</td>
+                    <td>~25 MB</td>
+                    <td>Proportional</td>
+                </tr>
+                <tr>
+                    <td><strong>Total</strong></td>
+                    <td><strong>780,525</strong></td>
+                    <td><strong>~95 MB</strong></td>
+                    <td><strong>Growing</strong></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <h2>10. Backup and Recovery</h2>
+
+    <h3>10.1 Backup Strategy</h3>
+    <div class="warning">
+        <strong>Critical:</strong> Regular backups are essential due to the complex multi-source nature of the data and the effort required to reconstruct the database.
+    </div>
+
+    <h4>Backup Schedule</h4>
+    <ul>
+        <li><strong>Full Backup:</strong> Daily at 02:00 UTC</li>
+        <li><strong>Incremental Backup:</strong> Every 6 hours</li>
+        <li><strong>Transaction Log Backup:</strong> Every 15 minutes</li>
+        <li><strong>Cross-region Backup:</strong> Weekly</li>
+    </ul>
+
+    <h3>10.2 Recovery Procedures</h3>
+    <pre><code>-- Point-in-time recovery example
+pg_restore --host=localhost --port=5432 --username=postgres --dbname=industry_intelligence 
+           --verbose --clean --no-owner --no-privileges backup_file.dump
+
+-- Verify data integrity after recovery
+SELECT COUNT(*) FROM indicators;
+SELECT COUNT(*) FROM oecd_indicators;
+SELECT COUNT(*) FROM imf_indicators;
+SELECT COUNT(*) FROM country_mappings;
+SELECT COUNT(*) FROM indicator_mappings;</code></pre>
+
+    <h2>11. Maintenance Procedures</h2>
+
+    <h3>11.1 Regular Maintenance Tasks</h3>
+    <h4>Daily Tasks</h4>
+    <ul>
+        <li>Monitor query performance</li>
+        <li>Check backup completion</li>
+        <li>Review error logs</li>
+        <li>Validate data quality scores</li>
+    </ul>
+
+    <h4>Weekly Tasks</h4>
+    <ul>
+        <li>Update table statistics</li>
+        <li>Reindex fragmented indexes</li>
+        <li>Clean up old log files</li>
+        <li>Review storage usage</li>
+    </ul>
+
+    <h4>Monthly Tasks</h4>
+    <ul>
+        <li>Comprehensive data quality analysis</li>
+        <li>Cross-source validation checks</li>
+        <li>Performance optimization review</li>
+        <li>Update documentation</li>
+    </ul>
+
+    <h3>11.2 Maintenance Scripts</h3>
+    <pre><code>-- Update table statistics
+ANALYZE indicators;
+ANALYZE oecd_indicators;
+ANALYZE imf_indicators;
+ANALYZE country_mappings;
+ANALYZE indicator_mappings;
+
+-- Reindex for performance
+REINDEX TABLE indicators;
+REINDEX TABLE oecd_indicators;
+REINDEX TABLE imf_indicators;
+
+-- Vacuum for space reclamation
+VACUUM ANALYZE indicators;
+VACUUM ANALYZE oecd_indicators;
+VACUUM ANALYZE imf_indicators;</code></pre>
+
+    <p style="text-align: center; margin-top: 48px; font-style: italic; color: #666;">
+        <strong>Document Version:</strong> 1.0<br>
+        <strong>Last Updated:</strong> July 2025<br>
+        <strong>Maintainer:</strong> Industry Intelligence Database Team
+    </p>
+</body>
+</html>
