@@ -1,4 +1,4 @@
--- ChatGPT-Optimized Database Views
+-- ChatGPT-Optimized Database Views (SIMPLIFIED)
 -- Migration: 006_chatgpt_optimized_views.sql
 
 -- 1. Country Profile View for ChatGPT
@@ -32,7 +32,7 @@ SELECT
     -- Data Quality Indicators
     CASE 
         WHEN (COALESCE(wb_stats.wb_data_count, 0) + COALESCE(oecd_stats.oecd_data_count, 0) + COALESCE(imf_stats.imf_data_count, 0)) >= 3 THEN 'high'
-        WHEN (COALESCE(wb_stats.wb_data_count, 0) + COALESCE(oecd_stats.oecd_data_count, 0) + COALESCE(imf_stats.imf_data_count, 0)) = 2 THEN 'medium'
+        WHEN (COALESCE(wb_stats.wb_data_count, 0) + COALESCE(oecd_stats.oecd_data_count, 0) + COALESCE(imf_stats.imf_data_count, 0)) >= 2 THEN 'medium'
         ELSE 'low'
     END as data_confidence_score,
     
@@ -43,7 +43,7 @@ SELECT
         CASE WHEN COALESCE(imf_stats.imf_data_count, 0) > 0 THEN ',IMF' ELSE '' END
     ) as data_sources,
     
-    -- Data counts for confidence calculation
+    -- Data counts
     COALESCE(wb_stats.wb_data_count, 0) as wb_data_count,
     COALESCE(oecd_stats.oecd_data_count, 0) as oecd_data_count,
     COALESCE(imf_stats.imf_data_count, 0) as imf_data_count,
@@ -177,7 +177,7 @@ LEFT JOIN (
     ORDER BY weo_country_code, year DESC
 ) latest_imf_deficit ON cm.imf_code = latest_imf_deficit.weo_country_code
 
--- Data source counts and update times
+-- Data source counts
 LEFT JOIN (
     SELECT 
         cm.unified_code,
@@ -196,7 +196,7 @@ LEFT JOIN (
         MAX(o.created_at) as latest_oecd_update
     FROM country_mappings cm
     LEFT JOIN oecd_indicators o ON cm.oecd_code = o.country_code
-    WHERE CAST(o.time_period AS INTEGER) >= 2020
+    WHERE o.time_period ~ '^\d{4}$' AND CAST(o.time_period AS INTEGER) >= 2020
     GROUP BY cm.unified_code
 ) oecd_stats ON cm.unified_code = oecd_stats.unified_code
 
@@ -213,168 +213,44 @@ LEFT JOIN (
 
 ORDER BY cm.country_name;
 
--- 2. Industry Analysis View for ChatGPT
+-- 2. Industry Analysis View for ChatGPT (SIMPLIFIED)
 CREATE MATERIALIZED VIEW chatgpt_industry_analysis AS
 SELECT 
-    industry,
-    country_code,
-    country_name,
+    i.industry,
+    i.country_code,
+    i.country_name,
     
-    -- Industry Performance Metrics
-    industry_indicator_count,
-    industry_completeness_score,
-    industry_latest_year,
+    -- Basic Industry Metrics
+    COUNT(DISTINCT i.indicator_code) as industry_indicator_count,
+    COUNT(CASE WHEN i.value IS NOT NULL THEN 1 END) as non_null_values,
+    MAX(i.year) as industry_latest_year,
+    MIN(i.year) as industry_earliest_year,
     
-    -- Key Industry Indicators
-    key_indicator_1_name,
-    key_indicator_1_value,
-    key_indicator_1_year,
-    key_indicator_2_name,
-    key_indicator_2_value,
-    key_indicator_2_year,
-    key_indicator_3_name,
-    key_indicator_3_value,
-    key_indicator_3_year,
+    -- Key Indicators (simple approach)
+    MAX(CASE WHEN i.year = (SELECT MAX(year) FROM indicators i2 WHERE i2.industry = i.industry AND i2.country_code = i.country_code) THEN i.indicator_name END) as latest_indicator_name,
+    MAX(CASE WHEN i.year = (SELECT MAX(year) FROM indicators i2 WHERE i2.industry = i.industry AND i2.country_code = i.country_code) THEN i.value END) as latest_indicator_value,
+    MAX(CASE WHEN i.year = (SELECT MAX(year) FROM indicators i2 WHERE i2.industry = i.industry AND i2.country_code = i.country_code) THEN i.year END) as latest_indicator_year,
     
-    -- Benchmarking
-    global_rank_in_industry,
-    regional_rank_in_industry,
-    percentile_score,
+    -- Simple Rankings
+    RANK() OVER (PARTITION BY i.industry ORDER BY COUNT(i.value) DESC) as data_richness_rank,
     
-    -- Trend Analysis
-    five_year_trend,
-    ten_year_trend,
+    -- Data Quality
+    CASE 
+        WHEN COUNT(DISTINCT i.source) >= 2 THEN 'high'
+        WHEN COUNT(DISTINCT i.source) = 1 THEN 'medium'
+        ELSE 'low'
+    END as industry_confidence_score,
     
-    -- Confidence Scoring
-    industry_confidence_score,
-    data_sources_count,
+    COUNT(DISTINCT i.source) as data_sources_count,
+    MAX(i.created_at) as last_updated
     
-    -- Metadata
-    last_updated
-    
-FROM (
-    SELECT 
-        i.industry,
-        i.country_code,
-        i.country_name,
-        
-        -- Count indicators per industry
-        COUNT(DISTINCT i.indicator_code) as industry_indicator_count,
-        
-        -- Calculate completeness (FIXED: Cast to numeric)
-        CAST(ROUND(
-            (COUNT(CASE WHEN i.value IS NOT NULL THEN 1 END) * 100.0 / 
-             COUNT(*))::numeric, 2
-        ) AS numeric) as industry_completeness_score,
-        
-        -- Latest year with data
-        MAX(i.year) as industry_latest_year,
-        
-        -- Top 3 indicators by recency and importance
-        (array_agg(
-            i.indicator_name 
-            ORDER BY i.year DESC, i.indicator_code DESC
-        ))[1] as key_indicator_1_name,
-        (array_agg(
-            i.value 
-            ORDER BY i.year DESC, i.indicator_code DESC
-        ))[1] as key_indicator_1_value,
-        (array_agg(
-            i.year 
-            ORDER BY i.year DESC, i.indicator_code DESC
-        ))[1] as key_indicator_1_year,
-        
-        (array_agg(
-            i.indicator_name 
-            ORDER BY i.year DESC, i.indicator_code DESC
-        ))[2] as key_indicator_2_name,
-        (array_agg(
-            i.value 
-            ORDER BY i.year DESC, i.indicator_code DESC
-        ))[2] as key_indicator_2_value,
-        (array_agg(
-            i.year 
-            ORDER BY i.year DESC, i.indicator_code DESC
-        ))[2] as key_indicator_2_year,
-        
-        (array_agg(
-            i.indicator_name 
-            ORDER BY i.year DESC, i.indicator_code DESC
-        ))[3] as key_indicator_3_name,
-        (array_agg(
-            i.value 
-            ORDER BY i.year DESC, i.indicator_code DESC
-        ))[3] as key_indicator_3_value,
-        (array_agg(
-            i.year 
-            ORDER BY i.year DESC, i.indicator_code DESC
-        ))[3] as key_indicator_3_year,
-        
-        -- Ranking within industry
-        RANK() OVER (
-            PARTITION BY i.industry 
-            ORDER BY AVG(i.value) DESC NULLS LAST
-        ) as global_rank_in_industry,
-        
-        -- Regional ranking
-        RANK() OVER (
-            PARTITION BY i.industry 
-            ORDER BY AVG(i.value) DESC NULLS LAST
-        ) as regional_rank_in_industry,
-        
-        -- Percentile score (FIXED: Cast to numeric)
-        CAST(ROUND(
-            (PERCENT_RANK() OVER (
-                PARTITION BY i.industry 
-                ORDER BY AVG(i.value) ASC NULLS LAST
-            ) * 100)::numeric, 2
-        ) AS numeric) as percentile_score,
-        
-        -- 5-year trend
-        CASE 
-            WHEN MAX(i.year) - MIN(i.year) >= 5 THEN
-                CASE 
-                    WHEN AVG(CASE WHEN i.year > MAX(i.year) - 5 THEN i.value END) > 
-                         AVG(CASE WHEN i.year <= MAX(i.year) - 5 THEN i.value END)
-                    THEN 'improving'
-                    ELSE 'declining'
-                END
-            ELSE 'insufficient_data'
-        END as five_year_trend,
-        
-        -- 10-year trend
-        CASE 
-            WHEN MAX(i.year) - MIN(i.year) >= 10 THEN
-                CASE 
-                    WHEN AVG(CASE WHEN i.year > MAX(i.year) - 10 THEN i.value END) > 
-                         AVG(CASE WHEN i.year <= MAX(i.year) - 10 THEN i.value END)
-                    THEN 'improving'
-                    ELSE 'declining'
-                END
-            ELSE 'insufficient_data'
-        END as ten_year_trend,
-        
-        -- Industry confidence score
-        CASE 
-            WHEN COUNT(DISTINCT i.source) >= 2 THEN 'high'
-            WHEN COUNT(DISTINCT i.source) = 1 THEN 'medium'
-            ELSE 'low'
-        END as industry_confidence_score,
-        
-        -- Data sources count
-        COUNT(DISTINCT i.source) as data_sources_count,
-        
-        -- Last updated
-        MAX(i.created_at) as last_updated
-        
-    FROM indicators i
-    WHERE i.industry IS NOT NULL
-    AND i.value IS NOT NULL
-    GROUP BY i.industry, i.country_code, i.country_name
-) industry_stats
-ORDER BY industry, global_rank_in_industry;
+FROM indicators i
+WHERE i.industry IS NOT NULL
+AND i.value IS NOT NULL
+GROUP BY i.industry, i.country_code, i.country_name
+ORDER BY i.industry, data_richness_rank;
 
--- 3. Historical Trends View for ChatGPT
+-- 3. Historical Trends View for ChatGPT (SIMPLIFIED)
 CREATE MATERIALIZED VIEW chatgpt_historical_trends AS
 SELECT 
     country_code,
@@ -387,53 +263,39 @@ SELECT
     array_agg(year ORDER BY year) as years,
     array_agg(value ORDER BY year) as values,
     
-    -- Trend Analysis
+    -- Simple Trend Analysis
     CASE 
         WHEN COUNT(*) >= 5 THEN
             CASE 
-                WHEN AVG(CASE WHEN year > MAX(year) - 5 THEN value END) > 
-                     AVG(CASE WHEN year <= MAX(year) - 5 THEN value END)
+                WHEN (array_agg(value ORDER BY year DESC))[1] > (array_agg(value ORDER BY year DESC))[5]
                 THEN 'positive'
                 ELSE 'negative'
             END
         ELSE 'insufficient_data'
     END as trend_direction,
     
-    -- Volatility Score (FIXED: Cast to numeric)
-    CASE 
-        WHEN AVG(value) > 0 THEN
-            CAST(ROUND(((STDDEV(value) / AVG(value)) * 100)::numeric, 2) AS numeric)
-        ELSE NULL
-    END as volatility_score,
-    
-    -- Data Quality (FIXED: Cast to numeric)
-    CAST(ROUND(
-        (COUNT(CASE WHEN value IS NOT NULL THEN 1 END) * 100.0 / 
-         (MAX(year) - MIN(year) + 1))::numeric, 2
-    ) AS numeric) as data_completeness_pct,
-    
-    -- Source consistency
-    CASE 
-        WHEN COUNT(DISTINCT source) = 1 THEN 'high'
-        WHEN COUNT(DISTINCT source) = 2 THEN 'medium'
-        ELSE 'low'
-    END as source_consistency_score,
-    
-    -- Key Statistics
+    -- Basic Statistics
     MIN(value) as min_value,
     MAX(value) as max_value,
-    CAST(ROUND(AVG(value)::numeric, 4) AS numeric) as avg_value,
+    AVG(value) as avg_value,
+    
+    -- Data Quality
+    COUNT(*) as total_records,
+    COUNT(DISTINCT source) as source_count,
     
     -- Latest values
-    (array_agg(value ORDER BY year DESC))[1] as latest_value,
     MAX(year) as latest_year,
     MIN(year) as earliest_year,
     
-    -- Record count
-    COUNT(*) as total_records,
-    
     -- Data sources
-    array_agg(DISTINCT source) as data_sources
+    array_agg(DISTINCT source) as data_sources,
+    
+    -- Simple confidence
+    CASE 
+        WHEN COUNT(DISTINCT source) >= 2 THEN 'high'
+        WHEN COUNT(DISTINCT source) = 1 THEN 'medium'
+        ELSE 'low'
+    END as trend_confidence_score
     
 FROM (
     SELECT country_code, country_name, indicator_code, indicator_name, 
@@ -471,11 +333,10 @@ ORDER BY country_code, indicator_code;
 -- Create indexes for performance
 CREATE INDEX idx_chatgpt_country_profiles_code ON chatgpt_country_profiles(country_code);
 CREATE INDEX idx_chatgpt_country_profiles_confidence ON chatgpt_country_profiles(data_confidence_score);
-CREATE INDEX idx_chatgpt_country_profiles_updated ON chatgpt_country_profiles(last_data_update);
 
 CREATE INDEX idx_chatgpt_industry_analysis_industry ON chatgpt_industry_analysis(industry);
 CREATE INDEX idx_chatgpt_industry_analysis_country ON chatgpt_industry_analysis(country_code);
-CREATE INDEX idx_chatgpt_industry_analysis_rank ON chatgpt_industry_analysis(global_rank_in_industry);
+CREATE INDEX idx_chatgpt_industry_analysis_rank ON chatgpt_industry_analysis(data_richness_rank);
 
 CREATE INDEX idx_chatgpt_historical_trends_country ON chatgpt_historical_trends(country_code);
 CREATE INDEX idx_chatgpt_historical_trends_indicator ON chatgpt_historical_trends(indicator_code);
