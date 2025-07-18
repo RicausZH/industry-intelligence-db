@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Documentation - Tri-Source Economic Intelligence Platform</title>
+    <style>
+        body {
+            max-width: 880px;
+            margin: 0 auto;
+            padding: 32px 80px;
+            position: relative;
+            box-sizing: border-box;
+            font-family: 'Times New Roman', serif;
+            line-height: 1.6;
+            color: #000;
+            background: #fff;
+        }
+        
+        h1 {
+            font-size: 24px;
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 32px;
+            border-bottom: 2px solid #000;
+            padding-bottom: 12px;
+        }
+        
+        h2 {
+            font-size: 18px;
+            font-weight: bold;
+            margin-top: 24px;
+            margin-bottom: 16px;
+            color: #000;
+        }
+        
+        h3 {
+            font-size: 16px;
+            font-weight: bold;
+            margin-top: 20px;
+            margin-bottom: 12px;
+            color: #000;
+        }
+        
+        h4 {
+            font-size: 14px;
+            font-weight: bold;
+            margin-top: 16px;
+            margin-bottom: 8px;
+            color: #000;
+        }
+        
+        p {
+            text-align: justify;
+            margin-bottom: 12px;
+            text-indent: 0;
+        }
+        
+        ul, ol {
+            margin-bottom: 12px;
+            padding-left: 32px;
+        }
+        
+        li {
+            margin-bottom: 6px;
+        }
+        
+        code {
+            font-family: 'Courier New', monospace;
+            background-color: #f5f5f5;
+            padding: 2px 4px;
+            border: 1px solid #ccc;
+        }
+        
+        pre {
+            font-family: 'Courier New', monospace;
+            background-color: #f5f5f5;
+            padding: 12px;
+            border: 1px solid #ccc;
+            margin: 12px 0;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 12px 0;
+        }
+        
+        th, td {
+            border: 1px solid #000;
+            padding: 8px;
+            text-align: left;
+        }
+        
+        th {
+            background-color: #f0f0f0;
+            font-weight: bold;
+        }
+        
+        .endpoint {
+            background-color: #f8f8f8;
+            padding: 8px;
+            margin: 8px 0;
+            border-left: 4px solid #000;
+        }
+        
+        .method {
+            font-weight: bold;
+            font-family: 'Courier New', monospace;
+        }
+        
+        .url {
+            font-family: 'Courier New', monospace;
+            color: #333;
+        }
+        
+        .version {
+            text-align: right;
+            font-style: italic;
+            margin-top: 32px;
+            border-top: 1px solid #ccc;
+            padding-top: 12px;
+        }
+    </style>
+</head>
+<body>
+    <h1>API Documentation<br>Tri-Source Economic Intelligence Platform</h1>
+    
+    <h2>1. Overview</h2>
+    <p>The Tri-Source Economic Intelligence Platform API provides programmatic access to over 780,525 economic data records from World Bank, OECD, and IMF sources. This RESTful API enables developers to integrate comprehensive economic intelligence into their applications, supporting 267 countries across 12 specialized industries with historical data from 1980 to 2030.</p>
+    
+    <h3>1.1 Base URL</h3>
+    <p>All API requests should be made to the following base URL:</p>
+    <pre>https://api.industry-intelligence-db.com/v1</pre>
+    
+    <h3>1.2 Data Format</h3>
+    <p>All API responses are returned in JSON format. Request payloads should also be sent as JSON with the appropriate <code>Content-Type: application/json</code> header.</p>
+    
+    <h3>1.3 Rate Limiting</h3>
+    <p>API requests are limited to 1000 requests per hour per API key. Rate limit headers are included in all responses:</p>
+    <ul>
+        <li><code>X-RateLimit-Limit</code>: Request limit per hour</li>
+        <li><code>X-RateLimit-Remaining</code>: Remaining requests in current window</li>
+        <li><code>X-RateLimit-Reset</code>: Time when rate limit resets (Unix timestamp)</li>
+    </ul>
+    
+    <h2>2. Authentication</h2>
+    <p>The API uses API key authentication. All requests must include an API key in the request header:</p>
+    <pre>Authorization: Bearer YOUR_API_KEY</pre>
+    
+    <h3>2.1 API Key Tiers</h3>
+    <table>
+        <tr>
+            <th>Tier</th>
+            <th>Rate Limit</th>
+            <th>Features</th>
+            <th>Price</th>
+        </tr>
+        <tr>
+            <td>Developer</td>
+            <td>100 requests/hour</td>
+            <td>Basic data access</td>
+            <td>Free</td>
+        </tr>
+        <tr>
+            <td>Professional</td>
+            <td>1,000 requests/hour</td>
+            <td>All endpoints, bulk downloads</td>
+            <td>$49/month</td>
+        </tr>
+        <tr>
+            <td>Enterprise</td>
+            <td>10,000 requests/hour</td>
+            <td>All features, priority support</td>
+            <td>$299/month</td>
+        </tr>
+    </table>
+    
+    <h3>2.2 Authentication Errors</h3>
+    <p>Invalid or missing API keys will return a 401 Unauthorized response:</p>
+    <pre>{
+  "error": "unauthorized",
+  "message": "Invalid API key",
+  "code": 401
+}</pre>
+    
+    <h2>3. Core Data Endpoints</h2>
+    
+    <h3>3.1 Country Data</h3>
+    
+    <h4>Get All Countries</h4>
+    <div class="endpoint">
+        <p><span class="method">GET</span> <span class="url">/countries</span></p>
+    </div>
+    <p>Returns a list of all available countries with their metadata.</p>
+    
+    <p><strong>Response:</strong></p>
+    <pre>{
+  "countries": [
+    {
+      "unified_code": "USA",
+      "name": "United States",
+      "wb_code": "USA",
+      "oecd_code": "USA",
+      "imf_code": "111",
+      "region": "North America",
+      "income_group": "High income",
+      "data_sources": ["WB", "OECD", "IMF"]
+    }
+  ],
+  "total": 267,
+  "page": 1
+}</pre>
+    
+    <h4>Get Country Details</h4>
+    <div class="endpoint">
+        <p><span class="method">GET</span> <span class="url">/countries/{country_code}</span></p>
+    </div>
+    <p>Returns detailed information about a specific country.</p>
+    
+    <p><strong>Parameters:</strong></p>
+    <ul>
+        <li><code>country_code</code> (required): Three-letter country code (e.g., "USA", "DEU")</li>
+    </ul>
+    
+    <h3>3.2 Industry Data</h3>
+    
+    <h4>Get All Industries</h4>
+    <div class="endpoint">
+        <p><span class="method">GET</span> <span class="url">/industries</span></p>
+    </div>
+    <p>Returns a list of all 12 industries with their indicator counts.</p>
+    
+    <p><strong>Response:</strong></p>
+    <pre>{
+  "industries": [
+    {
+      "code": "innovation",
+      "name": "Innovation",
+      "description": "R&D expenditure, patents, high-tech exports",
+      "indicator_count": 50,
+      "data_sources": ["WB", "OECD", "IMF"]
+    }
+  ],
+  "total": 12
+}</pre>
+    
+    <h4>Get Industry Details</h4>
+    <div class="endpoint">
+        <p><span class="method">GET</span> <span class="url">/industries/{industry_code}</span></p>
+    </div>
+    <p>Returns detailed information about a specific industry including all available indicators.</p>
+    
+    <h3>3.3 Indicator Data</h3>
+    
+    <h4>Get Indicators</h4>
+    <div class="endpoint">
+        <p><span class="method">GET</span> <span class="url">/indicators</span></p>
+    </div>
+    <p>Returns a list of all available indicators with filtering options.</p>
+    
+    <p><strong>Query Parameters:</strong></p>
+    <ul>
+        <li><code>industry</code>: Filter by industry code</li>
+        <li><code>source</code>: Filter by data source (WB, OECD, IMF)</li>
+        <li><code>search</code>: Search indicator names and descriptions</li>
+        <li><code>page</code>: Page number (default: 1)</li>
+        <li><code>limit</code>: Results per page (default: 50, max: 100)</li>
+    </ul>
+    
+    <h4>Get Indicator Data</h4>
+    <div class="endpoint">
+        <p><span class="method">GET</span> <span class="url">/indicators/{indicator_code}/data</span></p>
+    </div>
+    <p>Returns historical data for a specific indicator.</p>
+    
+    <p><strong>Query Parameters:</strong></p>
+    <ul>
+        <li><code>countries</code>: Comma-separated list of country codes</li>
+        <li><code>start_year</code>: Starting year (default: 1980)</li>
+        <li><code>end_year</code>: Ending year (default: 2030)</li>
+        <li><code>format</code>: Response format (json, csv) (default: json)</li>
+    </ul>
+    
+    <h2>4. Analysis Endpoints</h2>
+    
+    <h3>4.1 Country Analysis</h3>
+    
+    <h4>Country Profile</h4>
+    <div class="endpoint">
+        <p><span class="method">GET</span> <span class="url">/analysis/country/{country_code}/profile</span></p>
+    </div>
+    <p>Returns a comprehensive country profile with key economic indicators across all industries.</p>
+    
+    <h4>Country Comparison</h4>
+    <div class="endpoint">
+        <p><span class="method">POST</span> <span class="url">/analysis/countries/compare</span></p>
+    </div>
+    <p>Compares multiple countries across specified indicators.</p>
+    
+    <p><strong>Request Body:</strong></p>
+    <pre>{
+  "countries": ["USA", "DEU", "JPN"],
+  "indicators": ["NGDP_RPCH", "PCPIPCH"],
+  "year": 2023
+}</pre>
+    
+    <h3>4.2 Industry Analysis</h3>
+    
+    <h4>Industry Overview</h4>
+    <div class="endpoint">
+        <p><span class="method">GET</span> <span class="url">/analysis/industry/{industry_code}/overview</span></p>
+    </div>
+    <p>Returns industry-specific analysis including top performers, trends, and key metrics.</p>
+    
+    <h4>Industry Rankings</h4>
+    <div class="endpoint">
+        <p><span class="method">GET</span> <span class="url">/analysis/industry/{industry_code}/rankings</span></p>
+    </div>
+    <p>Returns country rankings for a specific industry based on composite indicators.</p>
+    
+    <h3>4.3 Trend Analysis</h3>
+    
+    <h4>Time Series Analysis</h4>
+    <div class="endpoint">
+        <p><span class="method">GET</span> <span class="url">/analysis/timeseries</span></p>
+    </div>
+    <p>Returns time series analysis for specified indicators and countries.</p>
+    
+    <p><strong>Query Parameters:</strong></p>
+    <ul>
+        <li><code>indicator</code>: Indicator code (required)</li>
+        <li><code>countries</code>: Comma-separated country codes (required)</li>
+        <li><code>start_year</code>: Starting year</li>
+        <li><code>end_year</code>: Ending year</li>
+        <li><code>analysis_type</code>: growth, correlation, volatility</li>
+    </ul>
+    
+    <h2>5. Bulk Data Endpoints</h2>
+    
+    <h3>5.1 Bulk Downloads</h3>
+    
+    <h4>Download Dataset</h4>
+    <div class="endpoint">
+        <p><span class="method">POST</span> <span class="url">/bulk/download</span></p>
+    </div>
+    <p>Creates a bulk download job for specified data criteria.</p>
+    
+    <p><strong>Request Body:</strong></p>
+    <pre>{
+  "countries": ["USA", "DEU", "JPN"],
+  "industries": ["innovation", "finance"],
+  "years": [2020, 2021, 2022, 2023],
+  "format": "csv",
+  "email": "user@example.com"
+}</pre>
+    
+    <h4>Download Status</h4>
+    <div class="endpoint">
+        <p><span class="method">GET</span> <span class="url">/bulk/download/{job_id}</span></p>
+    </div>
+    <p>Returns the status of a bulk download job.</p>
+    
+    <h2>6. Administrative Endpoints</h2>
+    
+    <h3>6.1 Data Freshness</h3>
+    
+    <h4>Last Updated</h4>
+    <div class="endpoint">
+        <p><span class="method">GET</span> <span class="url">/admin/last-updated</span></p>
+    </div>
+    <p>Returns the last update timestamps for each data source.</p>
+    
+    <h4>Data Coverage</h4>
+    <div class="endpoint">
+        <p><span class="method">GET</span> <span class="url">/admin/coverage</span></p>
+    </div>
+    <p>Returns data coverage statistics by country, industry, and year.</p>
+    
+    <h3>6.2 System Status</h3>
+    
+    <h4>Health Check</h4>
+    <div class="endpoint">
+        <p><span class="method">GET</span> <span class="url">/health</span></p>
+    </div>
+    <p>Returns system health status and database connectivity.</p>
+    
+    <h4>Statistics</h4>
+    <div class="endpoint">
+        <p><span class="method">GET</span> <span class="url">/stats</span></p>
+    </div>
+    <p>Returns overall database statistics including record counts and coverage metrics.</p>
+    
+    <h2>7. Error Handling</h2>
+    
+    <h3>7.1 Error Response Format</h3>
+    <p>All API errors follow a consistent format:</p>
+    <pre>{
+  "error": "error_type",
+  "message": "Human-readable error message",
+  "code": 400,
+  "details": {
+    "field": "specific error details"
+  }
+}</pre>
+    
+    <h3>7.2 HTTP Status Codes</h3>
+    <table>
+        <tr>
+            <th>Status Code</th>
+            <th>Description</th>
+        </tr>
+        <tr>
+            <td>200</td>
+            <td>Success</td>
+        </tr>
+        <tr>
+            <td>400</td>
+            <td>Bad Request - Invalid parameters</td>
+        </tr>
+        <tr>
+            <td>401</td>
+            <td>Unauthorized - Invalid API key</td>
+        </tr>
+        <tr>
+            <td>403</td>
+            <td>Forbidden - Insufficient permissions</td>
+        </tr>
+        <tr>
+            <td>404</td>
+            <td>Not Found - Resource not found</td>
+        </tr>
+        <tr>
+            <td>429</td>
+            <td>Too Many Requests - Rate limit exceeded</td>
+        </tr>
+        <tr>
+            <td>500</td>
+            <td>Internal Server Error</td>
+        </tr>
+    </table>
+    
+    <h2>8. Data Quality and Validation</h2>
+    
+    <h3>8.1 Data Quality Scores</h3>
+    <p>All data points include quality scores based on source reliability and validation:</p>
+    <ul>
+        <li><strong>World Bank:</strong> Quality score 5/5 (highest reliability)</li>
+        <li><strong>OECD:</strong> Quality score 4/5 (high reliability)</li>
+        <li><strong>IMF:</strong> Quality score 4/5 (high reliability)</li>
+    </ul>
+    
+    <h3>8.2 Data Validation</h3>
+    <p>The API includes cross-source validation indicators:</p>
+    <ul>
+        <li><code>validation_status</code>: validated, conflicting, single_source</li>
+        <li><code>confidence_score</code>: 0-100 confidence level</li>
+        <li><code>source_agreement</code>: Level of agreement between sources</li>
+    </ul>
+    
+    <h2>9. Usage Examples</h2>
+    
+    <h3>9.1 Basic Data Retrieval</h3>
+    <pre>curl -H "Authorization: Bearer YOUR_API_KEY" \
+     "https://api.industry-intelligence-db.com/v1/indicators/NGDP_RPCH/data?countries=USA,DEU&start_year=2020"</pre>
+    
+    <h3>9.2 Country Comparison</h3>
+    <pre>curl -X POST \
+     -H "Authorization: Bearer YOUR_API_KEY" \
+     -H "Content-Type: application/json" \
+     -d '{"countries":["USA","DEU","JPN"],"indicators":["NGDP_RPCH"],"year":2023}' \
+     "https://api.industry-intelligence-db.com/v1/analysis/countries/compare"</pre>
+    
+    <h3>9.3 Industry Analysis</h3>
+    <pre>curl -H "Authorization: Bearer YOUR_API_KEY" \
+     "https://api.industry-intelligence-db.com/v1/analysis/industry/innovation/overview"</pre>
+    
+    <h2>10. SDKs and Libraries</h2>
+    
+    <h3>10.1 Official SDKs</h3>
+    <p>Official SDKs are planned for the following languages:</p>
+    <ul>
+        <li><strong>Python:</strong> pip install industry-intelligence-sdk</li>
+        <li><strong>R:</strong> install.packages("industryintelligence")</li>
+        <li><strong>JavaScript/Node.js:</strong> npm install industry-intelligence-api</li>
+        <li><strong>Java:</strong> Maven/Gradle support</li>
+    </ul>
+    
+    <h3>10.2 Third-Party Integrations</h3>
+    <p>The API supports integration with popular data analysis platforms:</p>
+    <ul>
+        <li>Tableau Web Data Connector</li>
+        <li>Power BI Custom Connector</li>
+        <li>Excel Add-in</li>
+        <li>Google Sheets Add-on</li>
+    </ul>
+    
+    <h2>11. Versioning and Updates</h2>
+    
+    <h3>11.1 API Versioning</h3>
+    <p>The API uses semantic versioning with the version specified in the URL path. The current version is v1. Breaking changes will result in a new version (v2, v3, etc.).</p>
+    
+    <h3>11.2 Deprecation Policy</h3>
+    <p>API versions will be supported for a minimum of 12 months after a new version is released. Deprecation notices will be provided 6 months in advance.</p>
+    
+    <h2>12. Support and Resources</h2>
+    
+    <h3>12.1 Developer Resources</h3>
+    <ul>
+        <li><strong>Documentation:</strong> https://docs.industry-intelligence-db.com</li>
+        <li><strong>API Explorer:</strong> https://api.industry-intelligence-db.com/explorer</li>
+        <li><strong>Status Page:</strong> https://status.industry-intelligence-db.com</li>
+        <li><strong>GitHub:</strong> https://github.com/RicausZH/industry-intelligence-db</li>
+    </ul>
+    
+    <h3>12.2 Support Channels</h3>
+    <ul>
+        <li><strong>Email:</strong> support@industry-intelligence-db.com</li>
+        <li><strong>Discord:</strong> https://discord.gg/industry-intelligence</li>
+        <li><strong>Stack Overflow:</strong> Tag questions with "industry-intelligence-api"</li>
+    </ul>
+    
+    <div class="version">
+        <p><strong>API Version:</strong> 1.0.0<br>
+        <strong>Documentation Version:</strong> 1.0<br>
+        <strong>Last Updated:</strong> July 2025</p>
+    </div>
+</body>
+</html>
