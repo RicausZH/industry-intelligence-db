@@ -1,4 +1,4 @@
-Copyconst { Pool } = require('pg');
+const { Pool } = require('pg');
 require('dotenv').config();
 
 const pool = new Pool({
@@ -14,30 +14,30 @@ class ChatGPTDataFormatter {
             countryCode: countryData.country_code,
             dataQuality: {
                 overallConfidence: countryData.data_confidence_score,
-                sources: countryData.data_sources ? countryData.data_sources.split(',').filter(s => s) : [],
-                lastUpdated: countryData.last_data_update,
-                reliabilityStatement: this.getReliabilityStatement(countryData.data_confidence_score)
+                sources: countryData.data_sources ? countryData.data_sources.split(',').filter(s => s.trim()) : [],
+                lastUpdated: countryData.last_data_update
             },
             economics: {
                 gdpGrowth: {
                     value: countryData.latest_gdp_growth,
                     year: countryData.gdp_year,
-                    confidence: this.getConfidenceLevel(countryData.data_confidence_score)
+                    confidence: countryData.data_confidence_score,
+                    unit: 'percent'
                 },
                 gdpPerCapita: {
                     value: countryData.gdp_per_capita,
                     currency: 'USD',
-                    confidence: this.getConfidenceLevel(countryData.data_confidence_score)
+                    confidence: countryData.data_confidence_score
                 },
                 inflation: {
                     value: countryData.inflation_rate,
                     unit: 'percent',
-                    confidence: this.getConfidenceLevel(countryData.data_confidence_score)
+                    confidence: countryData.data_confidence_score
                 },
                 unemployment: {
                     value: countryData.unemployment_rate,
                     unit: 'percent',
-                    confidence: this.getConfidenceLevel(countryData.data_confidence_score)
+                    confidence: countryData.data_confidence_score
                 }
             },
             innovation: {
@@ -45,34 +45,34 @@ class ChatGPTDataFormatter {
                     value: countryData.rd_spending_pct_gdp,
                     year: countryData.rd_year,
                     unit: 'percent_of_gdp',
-                    confidence: this.getConfidenceLevel(countryData.data_confidence_score)
+                    confidence: countryData.data_confidence_score
                 },
                 patents: {
                     value: countryData.patent_applications,
                     unit: 'applications',
-                    confidence: this.getConfidenceLevel(countryData.data_confidence_score)
+                    confidence: countryData.data_confidence_score
                 },
                 hightechExports: {
                     value: countryData.hightech_exports_pct,
                     unit: 'percent_of_total_exports',
-                    confidence: this.getConfidenceLevel(countryData.data_confidence_score)
+                    confidence: countryData.data_confidence_score
                 }
             },
             trade: {
                 tradeBalance: {
                     value: countryData.trade_balance,
                     currency: 'USD',
-                    confidence: this.getConfidenceLevel(countryData.data_confidence_score)
+                    confidence: countryData.data_confidence_score
                 },
                 exportsGrowth: {
                     value: countryData.exports_growth,
                     unit: 'percent',
-                    confidence: this.getConfidenceLevel(countryData.data_confidence_score)
+                    confidence: countryData.data_confidence_score
                 },
                 importsGrowth: {
                     value: countryData.imports_growth,
                     unit: 'percent',
-                    confidence: this.getConfidenceLevel(countryData.data_confidence_score)
+                    confidence: countryData.data_confidence_score
                 }
             },
             fiscal: {
@@ -80,19 +80,18 @@ class ChatGPTDataFormatter {
                     value: countryData.government_debt_gdp,
                     unit: 'percent_of_gdp',
                     source: 'IMF',
-                    confidence: this.getConfidenceLevel(countryData.data_confidence_score)
+                    confidence: countryData.data_confidence_score
                 },
                 fiscalDeficit: {
                     value: countryData.fiscal_deficit_gdp,
                     unit: 'percent_of_gdp',
                     source: 'IMF',
-                    confidence: this.getConfidenceLevel(countryData.data_confidence_score)
+                    confidence: countryData.data_confidence_score
                 }
             },
             chatgptGuidance: {
                 reliabilityStatement: this.getReliabilityStatement(countryData.data_confidence_score),
                 recommendedUsage: this.getUsageRecommendations(countryData.data_confidence_score),
-                limitations: this.getDataLimitations(countryData.data_confidence_score),
                 citationFormat: this.getCitationFormat(countryData.data_sources)
             }
         };
@@ -105,42 +104,21 @@ class ChatGPTDataFormatter {
             countryCode: industryData.country_code,
             performance: {
                 indicatorCount: industryData.industry_indicator_count,
-                completenessScore: industryData.industry_completeness_score,
                 latestYear: industryData.industry_latest_year,
-                globalRank: industryData.global_rank_in_industry,
-                regionalRank: industryData.regional_rank_in_industry,
-                percentileScore: industryData.percentile_score
+                earliestYear: industryData.industry_earliest_year,
+                dataRichnessRank: industryData.data_richness_rank
             },
-            keyIndicators: [
-                {
-                    name: industryData.key_indicator_1_name,
-                    value: industryData.key_indicator_1_value,
-                    year: industryData.key_indicator_1_year
-                },
-                {
-                    name: industryData.key_indicator_2_name,
-                    value: industryData.key_indicator_2_value,
-                    year: industryData.key_indicator_2_year
-                },
-                {
-                    name: industryData.key_indicator_3_name,
-                    value: industryData.key_indicator_3_value,
-                    year: industryData.key_indicator_3_year
+            keyIndicators: {
+                latest: {
+                    name: industryData.latest_indicator_name,
+                    value: industryData.latest_indicator_value,
+                    year: industryData.latest_indicator_year
                 }
-            ].filter(indicator => indicator.name && indicator.value),
-            trends: {
-                fiveYear: industryData.five_year_trend,
-                tenYear: industryData.ten_year_trend
             },
             dataQuality: {
                 confidence: industryData.industry_confidence_score,
                 sourceCount: industryData.data_sources_count,
                 lastUpdated: industryData.last_updated
-            },
-            chatgptGuidance: {
-                analysisRecommendations: this.getIndustryAnalysisRecommendations(industryData.industry_confidence_score),
-                benchmarkingNotes: this.getBenchmarkingNotes(industryData.global_rank_in_industry),
-                trendInterpretation: this.getTrendInterpretation(industryData.five_year_trend, industryData.ten_year_trend)
             }
         };
     }
@@ -163,59 +141,40 @@ class ChatGPTDataFormatter {
             },
             analysis: {
                 trend: historicalData.trend_direction,
-                volatility: historicalData.volatility_score,
                 minValue: historicalData.min_value,
                 maxValue: historicalData.max_value,
-                avgValue: historicalData.avg_value,
-                latestValue: historicalData.latest_value
+                avgValue: historicalData.avg_value
             },
             dataQuality: {
-                completeness: historicalData.data_completeness_pct,
-                sourceConsistency: historicalData.source_consistency_score,
+                confidence: historicalData.trend_confidence_score,
+                sourceCount: historicalData.source_count,
                 sources: historicalData.data_sources
-            },
-            chatgptGuidance: {
-                trendAnalysis: this.getTrendAnalysisGuidance(historicalData.trend_direction, historicalData.volatility_score),
-                dataReliability: this.getHistoricalDataReliability(historicalData.data_completeness_pct),
-                recommendedUse: this.getHistoricalDataUsage(historicalData.source_consistency_score)
             }
         };
     }
 
     static getReliabilityStatement(confidenceLevel) {
         const statements = {
-            'high': 'Data validated across multiple authoritative sources (World Bank, OECD, IMF) with high reliability for policy analysis and academic research.',
-            'medium': 'Data from two reliable sources with good consistency, suitable for comparative analysis and trend identification.',
-            'low': 'Data from single authoritative source, suitable for general insights and preliminary analysis.',
-            'projection': 'Forward-looking data from IMF projections, suitable for scenario planning with appropriate uncertainty margins.'
+            'high': 'Data validated across multiple authoritative sources with high reliability for policy analysis.',
+            'medium': 'Data from reliable sources with good consistency, suitable for comparative analysis.',
+            'low': 'Data from authoritative source, suitable for general insights and preliminary analysis.'
         };
         return statements[confidenceLevel] || 'Data reliability assessment pending.';
     }
 
     static getUsageRecommendations(confidenceLevel) {
         const recommendations = {
-            'high': 'Suitable for detailed analysis, benchmarking, policy recommendations, and publication-quality reports.',
-            'medium': 'Good for trend analysis, comparative studies, and strategic planning with appropriate caveats.',
-            'low': 'Use for general insights, exploratory analysis, and as supporting evidence with additional sources.',
-            'projection': 'Use for scenario planning, forecasting exercises, and strategic planning with uncertainty ranges.'
+            'high': 'Suitable for detailed analysis, benchmarking, and policy recommendations.',
+            'medium': 'Good for trend analysis and comparative studies with appropriate caveats.',
+            'low': 'Use for general insights and exploratory analysis with additional sources.'
         };
         return recommendations[confidenceLevel] || 'Use with caution and verify with additional sources.';
-    }
-
-    static getDataLimitations(confidenceLevel) {
-        const limitations = {
-            'high': 'Minimal limitations. Data is well-validated and suitable for most analytical purposes.',
-            'medium': 'Some gaps in cross-source validation. Consider supplementing with additional sources for critical decisions.',
-            'low': 'Limited to single-source validation. Use as indicative data and supplement with other sources when possible.',
-            'projection': 'Subject to forecast uncertainty. Actual outcomes may vary significantly from projections.'
-        };
-        return limitations[confidenceLevel] || 'Limitations assessment pending.';
     }
 
     static getCitationFormat(sources) {
         if (!sources) return 'Source information not available';
         
-        const sourceList = sources.split(',').filter(s => s);
+        const sourceList = sources.split(',').map(s => s.trim()).filter(s => s);
         const sourceNames = {
             'WB': 'World Bank',
             'OECD': 'Organisation for Economic Co-operation and Development',
@@ -224,87 +183,6 @@ class ChatGPTDataFormatter {
         
         const fullNames = sourceList.map(s => sourceNames[s] || s);
         return `Data sources: ${fullNames.join(', ')}`;
-    }
-
-    static getConfidenceLevel(confidenceScore) {
-        return {
-            level: confidenceScore,
-            description: this.getReliabilityStatement(confidenceScore)
-        };
-    }
-
-    static getIndustryAnalysisRecommendations(confidence) {
-        const recommendations = {
-            'high': 'Comprehensive industry analysis possible with detailed benchmarking and trend analysis.',
-            'medium': 'Good foundation for industry analysis with some supplementary research recommended.',
-            'low': 'Basic industry insights available. Consider additional data sources for comprehensive analysis.'
-        };
-        return recommendations[confidence] || 'Industry analysis guidance pending.';
-    }
-
-    static getBenchmarkingNotes(rank) {
-        if (!rank) return 'Ranking information not available';
-        
-        if (rank <= 10) {
-            return 'Top performer in this industry globally. Excellent benchmark for best practices.';
-        } else if (rank <= 25) {
-            return 'Strong performer with good practices to study and emulate.';
-        } else if (rank <= 50) {
-            return 'Moderate performer with room for improvement based on top performers.';
-        } else {
-            return 'Opportunity for significant improvement by studying top performers in this industry.';
-        }
-    }
-
-    static getTrendInterpretation(fiveYear, tenYear) {
-        if (fiveYear === 'improving' && tenYear === 'improving') {
-            return 'Consistent long-term improvement trajectory with positive momentum.';
-        } else if (fiveYear === 'improving' && tenYear === 'declining') {
-            return 'Recent improvement after longer-term decline. Monitor for sustainability.';
-        } else if (fiveYear === 'declining' && tenYear === 'improving') {
-            return 'Recent decline despite longer-term improvement. Investigate recent challenges.';
-        } else if (fiveYear === 'declining' && tenYear === 'declining') {
-            return 'Concerning long-term decline requiring strategic intervention.';
-        } else {
-            return 'Insufficient data for comprehensive trend analysis.';
-        }
-    }
-
-    static getTrendAnalysisGuidance(trend, volatility) {
-        let guidance = `Trend direction: ${trend}. `;
-        
-        if (volatility) {
-            if (volatility < 10) {
-                guidance += 'Low volatility indicates stable, predictable patterns.';
-            } else if (volatility < 25) {
-                guidance += 'Moderate volatility suggests some cyclical variation.';
-            } else {
-                guidance += 'High volatility indicates significant fluctuation and uncertainty.';
-            }
-        }
-        
-        return guidance;
-    }
-
-    static getHistoricalDataReliability(completeness) {
-        if (completeness >= 90) {
-            return 'Excellent data completeness with minimal gaps.';
-        } else if (completeness >= 70) {
-            return 'Good data completeness with some minor gaps.';
-        } else if (completeness >= 50) {
-            return 'Moderate data completeness with notable gaps.';
-        } else {
-            return 'Limited data completeness with significant gaps.';
-        }
-    }
-
-    static getHistoricalDataUsage(sourceConsistency) {
-        const usage = {
-            'high': 'Consistent single-source data ideal for trend analysis.',
-            'medium': 'Multi-source data requires careful interpretation of methodology differences.',
-            'low': 'Mixed-source data should be used with caution and appropriate caveats.'
-        };
-        return usage[sourceConsistency] || 'Source consistency assessment pending.';
     }
 
     // Main query functions
@@ -343,7 +221,7 @@ class ChatGPTDataFormatter {
                 params.push(countryCode);
             }
             
-            query += ' ORDER BY global_rank_in_industry LIMIT 20';
+            query += ' ORDER BY data_richness_rank LIMIT 20';
             
             const result = await client.query(query, params);
             
@@ -369,7 +247,7 @@ class ChatGPTDataFormatter {
                 params.push(indicatorCode);
             }
             
-            query += ' ORDER BY indicator_code';
+            query += ' ORDER BY indicator_code LIMIT 50';
             
             const result = await client.query(query, params);
             
