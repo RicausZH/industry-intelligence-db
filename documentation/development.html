@@ -1,0 +1,774 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Development Environment and Guidelines</title>
+    <style>
+        body {
+            max-width: 880px;
+            margin: 0 auto;
+            padding: 32px 80px;
+            position: relative;
+            box-sizing: border-box;
+            font-family: 'Times New Roman', serif;
+            line-height: 1.6;
+            color: #000;
+            background: #fff;
+        }
+        
+        h1 {
+            text-align: center;
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 32px;
+            border-bottom: 2px solid #000;
+            padding-bottom: 8px;
+        }
+        
+        h2 {
+            font-size: 18px;
+            font-weight: bold;
+            margin-top: 32px;
+            margin-bottom: 16px;
+            color: #000;
+        }
+        
+        h3 {
+            font-size: 16px;
+            font-weight: bold;
+            margin-top: 24px;
+            margin-bottom: 12px;
+            color: #000;
+        }
+        
+        h4 {
+            font-size: 14px;
+            font-weight: bold;
+            margin-top: 20px;
+            margin-bottom: 8px;
+            color: #000;
+        }
+        
+        p {
+            margin-bottom: 12px;
+            text-align: justify;
+        }
+        
+        ul, ol {
+            margin-bottom: 16px;
+            padding-left: 40px;
+        }
+        
+        li {
+            margin-bottom: 8px;
+        }
+        
+        code {
+            font-family: 'Courier New', monospace;
+            background-color: #f5f5f5;
+            padding: 2px 4px;
+            border: 1px solid #ccc;
+        }
+        
+        pre {
+            font-family: 'Courier New', monospace;
+            background-color: #f5f5f5;
+            padding: 16px;
+            border: 1px solid #ccc;
+            margin: 16px 0;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 16px 0;
+        }
+        
+        th, td {
+            border: 1px solid #000;
+            padding: 8px;
+            text-align: left;
+        }
+        
+        th {
+            background-color: #f0f0f0;
+            font-weight: bold;
+        }
+        
+        .note {
+            background-color: #f9f9f9;
+            border-left: 4px solid #ccc;
+            padding: 12px;
+            margin: 16px 0;
+        }
+        
+        .warning {
+            background-color: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 12px;
+            margin: 16px 0;
+        }
+        
+        .important {
+            background-color: #f8d7da;
+            border-left: 4px solid #dc3545;
+            padding: 12px;
+            margin: 16px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>Development Environment and Guidelines</h1>
+    
+    <h2>1. Development Environment Setup</h2>
+    
+    <h3>1.1 Prerequisites</h3>
+    
+    <p>Before beginning development on the Tri-Source Economic Intelligence Platform, ensure you have the following prerequisites installed:</p>
+    
+    <h4>Required Software</h4>
+    <ul>
+        <li><strong>Node.js:</strong> Version 18.0.0 or higher</li>
+        <li><strong>npm:</strong> Version 8.0.0 or higher (included with Node.js)</li>
+        <li><strong>PostgreSQL:</strong> Version 13.0 or higher</li>
+        <li><strong>Git:</strong> Version 2.30 or higher</li>
+    </ul>
+    
+    <h4>Development Tools</h4>
+    <ul>
+        <li><strong>Code Editor:</strong> Visual Studio Code (recommended) or similar</li>
+        <li><strong>Database Client:</strong> pgAdmin, DBeaver, or similar PostgreSQL client</li>
+        <li><strong>API Testing:</strong> Postman or similar (for future API development)</li>
+    </ul>
+    
+    <h4>System Requirements</h4>
+    <ul>
+        <li><strong>RAM:</strong> Minimum 8GB (16GB recommended for processing large datasets)</li>
+        <li><strong>Storage:</strong> At least 50GB available space for data processing</li>
+        <li><strong>Network:</strong> Reliable internet connection for data downloads</li>
+    </ul>
+    
+    <h3>1.2 Local Environment Setup</h3>
+    
+    <h4>Step 1: Repository Setup</h4>
+    <pre>
+# Clone the repository
+git clone https://github.com/RicausZH/industry-intelligence-db.git
+cd industry-intelligence-db
+
+# Install dependencies
+npm install
+
+# Create environment file
+cp .env.example .env
+    </pre>
+    
+    <h4>Step 2: Database Configuration</h4>
+    <pre>
+# Create local PostgreSQL database
+createdb industry_intelligence_dev
+
+# Update .env file with your database connection
+DATABASE_URL=postgresql://username:password@localhost:5432/industry_intelligence_dev
+NODE_ENV=development
+    </pre>
+    
+    <h4>Step 3: Database Initialization</h4>
+    <pre>
+# Run database setup
+npm run setup-db
+
+# Populate country and indicator mappings
+npm run setup-mappings
+npm run setup-imf-mappings
+
+# Verify setup
+npm run verify
+    </pre>
+    
+    <div class="note">
+        <strong>Note:</strong> The full database setup with all data sources requires approximately 2-3 hours and 10GB of storage space. For development purposes, consider using a subset of data.
+    </div>
+    
+    <h3>1.3 Development Data Setup</h3>
+    
+    <p>For development purposes, you can work with a subset of data to reduce setup time:</p>
+    
+    <h4>Option 1: Full Data Setup (Production Mirror)</h4>
+    <pre>
+# Process all data sources (requires 2-3 hours)
+npm run process-wb -- --url "WORLD_BANK_URL"
+npm run process-oecd -- --url "OECD_URL"
+npm run process-imf -- --url "IMF_URL"
+    </pre>
+    
+    <h4>Option 2: Development Data Subset</h4>
+    <pre>
+# Process only recent years for faster setup
+npm run process-wb -- --url "WORLD_BANK_URL" --years "2020-2024"
+npm run process-oecd -- --url "OECD_URL" --years "2020-2024"
+npm run process-imf -- --url "IMF_URL" --years "2020-2024"
+    </pre>
+    
+    <h2>2. Coding Standards and Conventions</h2>
+    
+    <h3>2.1 JavaScript Coding Standards</h3>
+    
+    <h4>General Principles</h4>
+    <ul>
+        <li>Use ES6+ syntax consistently</li>
+        <li>Follow async/await patterns for asynchronous operations</li>
+        <li>Implement proper error handling with try-catch blocks</li>
+        <li>Use meaningful variable and function names</li>
+        <li>Write self-documenting code with clear logic flow</li>
+    </ul>
+    
+    <h4>Naming Conventions</h4>
+    <ul>
+        <li><strong>Variables:</strong> camelCase (e.g., <code>countryCode</code>, <code>indicatorValue</code>)</li>
+        <li><strong>Functions:</strong> camelCase with descriptive verbs (e.g., <code>processCSVData</code>, <code>validateCountryCode</code>)</li>
+        <li><strong>Constants:</strong> UPPER_SNAKE_CASE (e.g., <code>MAX_BATCH_SIZE</code>, <code>DATABASE_TIMEOUT</code>)</li>
+        <li><strong>Files:</strong> kebab-case (e.g., <code>process-imf-weo.js</code>, <code>validate-data-integrity.js</code>)</li>
+    </ul>
+    
+    <h4>Code Structure</h4>
+    <pre>
+// Standard script structure
+const { Pool } = require('pg');
+const csv = require('csv-parser');
+
+// Database configuration
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+});
+
+// Validation functions
+function validateCountryCode(code) {
+  // Implementation
+}
+
+// Main processing function
+async function processData(url) {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    // Processing logic
+    await client.query('COMMIT');
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
+// Export for testing
+module.exports = { processData };
+    </pre>
+    
+    <h3>2.2 Database Standards</h3>
+    
+    <h4>SQL Conventions</h4>
+    <ul>
+        <li>Use uppercase for SQL keywords (SELECT, FROM, WHERE, etc.)</li>
+        <li>Use snake_case for table and column names</li>
+        <li>Always use parameterized queries to prevent SQL injection</li>
+        <li>Include proper indexes for performance optimization</li>
+    </ul>
+    
+    <h4>Transaction Management</h4>
+    <pre>
+// Always use transactions for data modifications
+await client.query('BEGIN');
+try {
+  await client.query('INSERT INTO table_name (column1, column2) VALUES ($1, $2)', [value1, value2]);
+  await client.query('UPDATE another_table SET column = $1 WHERE id = $2', [newValue, id]);
+  await client.query('COMMIT');
+} catch (error) {
+  await client.query('ROLLBACK');
+  throw error;
+}
+    </pre>
+    
+    <h3>2.3 Error Handling Standards</h3>
+    
+    <h4>Comprehensive Error Handling</h4>
+    <pre>
+async function processWithErrorHandling(data) {
+  try {
+    // Validate input
+    if (!data || !Array.isArray(data)) {
+      throw new Error('Invalid input data format');
+    }
+    
+    // Process data
+    const result = await processData(data);
+    
+    // Log success
+    console.log(`✅ Successfully processed ${result.count} records`);
+    
+    return result;
+  } catch (error) {
+    // Log error with context
+    console.error(`❌ Processing failed: ${error.message}`);
+    console.error(`Stack trace: ${error.stack}`);
+    
+    // Re-throw for upstream handling
+    throw error;
+  }
+}
+    </pre>
+    
+    <h4>Logging Standards</h4>
+    <ul>
+        <li>Use emoji prefixes for log levels (✅ success, ❌ error, ⚠️ warning, 🔄 processing)</li>
+        <li>Include contextual information in log messages</li>
+        <li>Log progress for long-running operations</li>
+        <li>Use consistent formatting across all scripts</li>
+    </ul>
+    
+    <h2>3. Testing Procedures</h2>
+    
+    <h3>3.1 Testing Framework</h3>
+    
+    <p>The project uses a combination of unit tests, integration tests, and data validation tests to ensure reliability.</p>
+    
+    <h4>Test Structure</h4>
+    <pre>
+tests/
+├── unit/
+│   ├── validation.test.js
+│   ├── processing.test.js
+│   └── mapping.test.js
+├── integration/
+│   ├── database.test.js
+│   ├── data-flow.test.js
+│   └── multi-source.test.js
+└── data/
+    ├── data-quality.test.js
+    ├── completeness.test.js
+    └── consistency.test.js
+    </pre>
+    
+    <h4>Running Tests</h4>
+    <pre>
+# Run all tests
+npm test
+
+# Run specific test categories
+npm run test:unit
+npm run test:integration
+npm run test:data
+
+# Run tests with coverage
+npm run test:coverage
+    </pre>
+    
+    <h3>3.2 Data Validation Testing</h3>
+    
+    <h4>Required Data Quality Tests</h4>
+    <ul>
+        <li><strong>Completeness:</strong> Verify expected record counts by source</li>
+        <li><strong>Consistency:</strong> Cross-validate data between sources</li>
+        <li><strong>Accuracy:</strong> Check for impossible values and outliers</li>
+        <li><strong>Timeliness:</strong> Ensure data freshness and update frequency</li>
+    </ul>
+    
+    <h4>Test Data Setup</h4>
+    <pre>
+# Create test database
+createdb industry_intelligence_test
+
+# Run test data setup
+NODE_ENV=test npm run setup-test-data
+
+# Run data validation tests
+npm run test:data
+    </pre>
+    
+    <h3>3.3 Performance Testing</h3>
+    
+    <h4>Performance Benchmarks</h4>
+    <table>
+        <tr>
+            <th>Operation</th>
+            <th>Expected Time</th>
+            <th>Memory Usage</th>
+            <th>Test Command</th>
+        </tr>
+        <tr>
+            <td>Database Query (1000 records)</td>
+            <td>&lt; 100ms</td>
+            <td>&lt; 50MB</td>
+            <td>npm run test:query-performance</td>
+        </tr>
+        <tr>
+            <td>CSV Processing (10,000 records)</td>
+            <td>&lt; 30 seconds</td>
+            <td>&lt; 200MB</td>
+            <td>npm run test:processing-performance</td>
+        </tr>
+        <tr>
+            <td>Data Validation (full database)</td>
+            <td>&lt; 5 minutes</td>
+            <td>&lt; 500MB</td>
+            <td>npm run test:validation-performance</td>
+        </tr>
+    </table>
+    
+    <h2>4. Git Workflow and Version Control</h2>
+    
+    <h3>4.1 Branching Strategy</h3>
+    
+    <h4>Branch Types</h4>
+    <ul>
+        <li><strong>main:</strong> Production-ready code</li>
+        <li><strong>develop:</strong> Integration branch for features</li>
+        <li><strong>feature/:</strong> New features (e.g., feature/api-endpoints)</li>
+        <li><strong>bugfix/:</strong> Bug fixes (e.g., bugfix/validation-error)</li>
+        <li><strong>hotfix/:</strong> Critical production fixes</li>
+    </ul>
+    
+    <h4>Workflow Process</h4>
+    <pre>
+# Create feature branch
+git checkout -b feature/new-validation-system
+
+# Make changes and commit
+git add .
+git commit -m "feat: add comprehensive data validation system"
+
+# Push branch
+git push origin feature/new-validation-system
+
+# Create pull request
+# After review and approval, merge to develop
+    </pre>
+    
+    <h3>4.2 Commit Message Standards</h3>
+    
+    <h4>Commit Message Format</h4>
+    <pre>
+type(scope): description
+
+[optional body]
+
+[optional footer]
+    </pre>
+    
+    <h4>Commit Types</h4>
+    <ul>
+        <li><strong>feat:</strong> New feature</li>
+        <li><strong>fix:</strong> Bug fix</li>
+        <li><strong>docs:</strong> Documentation changes</li>
+        <li><strong>style:</strong> Code style changes (formatting, etc.)</li>
+        <li><strong>refactor:</strong> Code refactoring</li>
+        <li><strong>test:</strong> Adding or modifying tests</li>
+        <li><strong>chore:</strong> Maintenance tasks</li>
+    </ul>
+    
+    <h4>Examples</h4>
+    <pre>
+feat(processing): add IMF data processing pipeline
+fix(validation): correct country code validation logic
+docs(api): update API documentation for new endpoints
+refactor(database): optimize query performance for large datasets
+    </pre>
+    
+    <h2>5. Code Review Process</h2>
+    
+    <h3>5.1 Review Requirements</h3>
+    
+    <h4>Before Submitting Pull Request</h4>
+    <ul>
+        <li>Ensure all tests pass locally</li>
+        <li>Run data validation checks</li>
+        <li>Update documentation if necessary</li>
+        <li>Follow coding standards and conventions</li>
+        <li>Include meaningful commit messages</li>
+    </ul>
+    
+    <h4>Pull Request Checklist</h4>
+    <ul>
+        <li>Clear description of changes</li>
+        <li>Link to related issues</li>
+        <li>Screenshots or examples if applicable</li>
+        <li>Performance impact assessment</li>
+        <li>Database migration scripts if needed</li>
+    </ul>
+    
+    <h3>5.2 Review Criteria</h3>
+    
+    <h4>Code Quality Checks</h4>
+    <ul>
+        <li><strong>Functionality:</strong> Does the code work as intended?</li>
+        <li><strong>Security:</strong> Are there any security vulnerabilities?</li>
+        <li><strong>Performance:</strong> Is the code efficient and scalable?</li>
+        <li><strong>Maintainability:</strong> Is the code readable and well-structured?</li>
+        <li><strong>Testing:</strong> Are there adequate tests covering the changes?</li>
+    </ul>
+    
+    <h4>Data Quality Checks</h4>
+    <ul>
+        <li><strong>Validation:</strong> Are input validations comprehensive?</li>
+        <li><strong>Error Handling:</strong> Are errors handled gracefully?</li>
+        <li><strong>Data Integrity:</strong> Are database constraints respected?</li>
+        <li><strong>Performance:</strong> Are queries optimized for large datasets?</li>
+    </ul>
+    
+    <h2>6. Documentation Standards</h2>
+    
+    <h3>6.1 Code Documentation</h3>
+    
+    <h4>Function Documentation</h4>
+    <pre>
+/**
+ * Validates and processes country code data
+ * @param {string} countryCode - ISO 3-letter country code
+ * @param {string} source - Data source identifier ('WB', 'OECD', 'IMF')
+ * @returns {Object} Validation result with normalized code and metadata
+ * @throws {Error} When country code is invalid or unsupported
+ */
+function validateCountryCode(countryCode, source) {
+  // Implementation
+}
+    </pre>
+    
+    <h4>Script Documentation</h4>
+    <pre>
+/**
+ * IMF World Economic Outlook Data Processing Script
+ * 
+ * Processes IMF WEO CSV data and integrates it into the multi-source database.
+ * Handles data validation, country/indicator mapping, and batch processing.
+ * 
+ * Usage: npm run process-imf -- --url "IMF_CSV_URL"
+ * 
+ * Dependencies:
+ * - Pre-populated country and indicator mappings
+ * - Active database connection
+ * - Valid IMF CSV format
+ * 
+ * Output:
+ * - Processed records in imf_indicators table
+ * - Validation report and statistics
+ * - Error log for failed records
+ */
+    </pre>
+    
+    <h3>6.2 README Updates</h3>
+    
+    <h4>When to Update README</h4>
+    <ul>
+        <li>Adding new scripts or commands</li>
+        <li>Changing installation procedures</li>
+        <li>Adding new data sources</li>
+        <li>Updating system requirements</li>
+        <li>Adding new features or capabilities</li>
+    </ul>
+    
+    <h4>Documentation Structure</h4>
+    <pre>
+docs/
+├── README.md              # Main project documentation
+├── ARCHITECTURE.md        # System architecture
+├── DATABASE_SCHEMA.md     # Database documentation
+├── API.md                 # API documentation
+├── DEPLOYMENT.md          # Deployment guide
+├── DEVELOPMENT.md         # This document
+└── examples/
+    ├── basic-usage.md
+    ├── advanced-queries.md
+    └── data-analysis.md
+    </pre>
+    
+    <h2>7. Debugging and Troubleshooting</h2>
+    
+    <h3>7.1 Common Issues and Solutions</h3>
+    
+    <h4>Database Connection Issues</h4>
+    <div class="warning">
+        <strong>Issue:</strong> "Connection refused" or "Database does not exist"<br>
+        <strong>Solution:</strong> Verify PostgreSQL is running and DATABASE_URL is correct
+    </div>
+    
+    <h4>Memory Issues During Processing</h4>
+    <div class="warning">
+        <strong>Issue:</strong> "JavaScript heap out of memory"<br>
+        <strong>Solution:</strong> Increase Node.js memory limit: <code>node --max-old-space-size=4096 script.js</code>
+    </div>
+    
+    <h4>Data Validation Failures</h4>
+    <div class="warning">
+        <strong>Issue:</strong> "Invalid data format" or "Constraint violation"<br>
+        <strong>Solution:</strong> Check data source format and mapping configurations
+    </div>
+    
+    <h3>7.2 Debugging Tools</h3>
+    
+    <h4>Development Commands</h4>
+    <pre>
+# Enable debug logging
+DEBUG=* npm run process-imf
+
+# Run with increased verbosity
+npm run process-imf -- --verbose
+
+# Dry run (validation only)
+npm run process-imf -- --dry-run
+
+# Process subset for testing
+npm run process-imf -- --limit 1000
+    </pre>
+    
+    <h4>Database Debugging</h4>
+    <pre>
+# Check database connection
+npm run verify
+
+# Analyze database performance
+npm run analyze
+
+# Check data quality
+npm run validate
+    </pre>
+    
+    <h2>8. Contributing Guidelines</h2>
+    
+    <h3>8.1 Getting Started</h3>
+    
+    <h4>First-Time Contributors</h4>
+    <ol>
+        <li>Fork the repository</li>
+        <li>Set up local development environment</li>
+        <li>Read through existing code and documentation</li>
+        <li>Start with small, well-defined issues</li>
+        <li>Ask questions in issues or discussions</li>
+    </ol>
+    
+    <h4>Finding Issues to Work On</h4>
+    <ul>
+        <li>Look for issues labeled "good first issue"</li>
+        <li>Check the project roadmap for planned features</li>
+        <li>Review open bug reports</li>
+        <li>Propose improvements to documentation</li>
+    </ul>
+    
+    <h3>8.2 Contribution Process</h3>
+    
+    <h4>Step-by-Step Process</h4>
+    <ol>
+        <li>Create or comment on an issue to discuss the change</li>
+        <li>Fork the repository and create a feature branch</li>
+        <li>Make your changes following coding standards</li>
+        <li>Write or update tests for your changes</li>
+        <li>Update documentation if necessary</li>
+        <li>Test your changes thoroughly</li>
+        <li>Submit a pull request with clear description</li>
+        <li>Respond to review feedback</li>
+        <li>Ensure all checks pass before merge</li>
+    </ol>
+    
+    <h3>8.3 Quality Assurance</h3>
+    
+    <h4>Pre-Submission Checklist</h4>
+    <ul>
+        <li>All tests pass locally</li>
+        <li>Code follows project conventions</li>
+        <li>Documentation is updated</li>
+        <li>No console.log statements in production code</li>
+        <li>Error handling is comprehensive</li>
+        <li>Performance impact is considered</li>
+    </ul>
+    
+    <div class="important">
+        <strong>Important:</strong> Never commit sensitive information such as database credentials, API keys, or personal data. Use environment variables for configuration.
+    </div>
+    
+    <h2>9. Development Tools and Extensions</h2>
+    
+    <h3>9.1 Recommended VS Code Extensions</h3>
+    
+    <h4>Essential Extensions</h4>
+    <ul>
+        <li><strong>PostgreSQL:</strong> Database management and queries</li>
+        <li><strong>ESLint:</strong> JavaScript linting</li>
+        <li><strong>Prettier:</strong> Code formatting</li>
+        <li><strong>GitLens:</strong> Enhanced Git capabilities</li>
+        <li><strong>Thunder Client:</strong> API testing</li>
+    </ul>
+    
+    <h4>Helpful Extensions</h4>
+    <ul>
+        <li><strong>CSV Viewer:</strong> Better CSV file handling</li>
+        <li><strong>Rainbow CSV:</strong> CSV syntax highlighting</li>
+        <li><strong>SQL Tools:</strong> Database connections</li>
+        <li><strong>Node.js Modules Intellisense:</strong> Better autocomplete</li>
+    </ul>
+    
+    <h3>9.2 Development Scripts</h3>
+    
+    <h4>Useful Development Commands</h4>
+    <pre>
+# Watch for file changes during development
+npm run dev
+
+# Run linting checks
+npm run lint
+
+# Fix linting issues automatically
+npm run lint:fix
+
+# Format code
+npm run format
+
+# Generate documentation
+npm run docs
+    </pre>
+    
+    <h2>10. Support and Resources</h2>
+    
+    <h3>10.1 Getting Help</h3>
+    
+    <h4>Available Resources</h4>
+    <ul>
+        <li><strong>Documentation:</strong> Check project documentation first</li>
+        <li><strong>GitHub Issues:</strong> Search existing issues or create new ones</li>
+        <li><strong>GitHub Discussions:</strong> Ask questions and share ideas</li>
+        <li><strong>Code Comments:</strong> Review inline documentation</li>
+    </ul>
+    
+    <h4>Creating Good Issues</h4>
+    <ul>
+        <li>Use clear, descriptive titles</li>
+        <li>Include system information and versions</li>
+        <li>Provide steps to reproduce problems</li>
+        <li>Include relevant code snippets or logs</li>
+        <li>Tag issues appropriately</li>
+    </ul>
+    
+    <h3>10.2 Community Guidelines</h3>
+    
+    <h4>Communication Standards</h4>
+    <ul>
+        <li>Be respectful and professional</li>
+        <li>Provide constructive feedback</li>
+        <li>Help others learn and improve</li>
+        <li>Follow code of conduct</li>
+        <li>Share knowledge and best practices</li>
+    </ul>
+    
+    <div class="note">
+        <strong>Note:</strong> This development guide is a living document. Please help keep it updated as the project evolves by suggesting improvements and corrections.
+    </div>
+    
+    <p style="text-align: center; margin-top: 40px; font-style: italic;">
+        Last updated: July 2025<br>
+        Version: 1.0.0
+    </p>
+</body>
+</html>
