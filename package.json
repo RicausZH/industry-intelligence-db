@@ -30,7 +30,7 @@
     
     "full-setup": "npm run setup-db && npm run populate-mappings && npm run populate-imf-mappings",
     "health-check": "npm run verify-db && npm run validate-data",
-    "complete-integration": "npm run process-wb-enhanced && npm run process-oecd && npm run process-imf"
+    "complete-integration": "npm run process-wb-enhanced && npm run process-oecd && npm run process-imf",
 
     "validate": "node scripts/validation/validate-data-integrity.js",
     "health-check": "npm run verify && npm run validate"
