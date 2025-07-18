@@ -1,4 +1,3 @@
-//push
 const https = require('https');
 const http = require('http');
 const csv = require('csv-parser');
@@ -12,33 +11,15 @@ const pool = new Pool({
   connectionTimeoutMillis: 2000,
 });
 
-// OECD MSTI Column Mapping (based on your uploaded file structure)
-const OECD_COLUMNS = {
-  REF_AREA: 'country_code',
-  'Reference area': 'country_name',
-  MEASURE: 'indicator_code',
-  'Measure': 'indicator_description',
-  TIME_PERIOD: 'year',
-  OBS_VALUE: 'value',
-  UNIT_MEASURE: 'unit',
-  'Unit of measure': 'unit_description'
-};
+// Pre-loaded mappings to avoid database calls during processing
+let INDICATOR_MAPPINGS = {};
+let COUNTRY_MAPPINGS = {};
 
-// Input validation functions (adapted from your process-wb-enhanced.js)
+// Input validation functions
 function validateURL(url) {
   if (!url || typeof url !== 'string') {
     throw new Error('Invalid URL provided');
   }
-  
-  // Support Google Drive URLs, Railway URLs, and GenSpark URLs
-  const googleDrivePattern = /^https:\/\/drive\.google\.com\/uc\?export=download&id=[a-zA-Z0-9_-]+$/;
-  const railwayPattern = /^https:\/\/railway-file-upload-production-\d+\.up\.railway\.app\/download\/\d+-[a-zA-Z0-9_-]+\.csv$/;
-  const gensparkPattern = /^https:\/\/page\.gensparksite\.com\/get_upload_url\/[a-zA-Z0-9]+\/[a-zA-Z0-9]+\/[a-zA-Z0-9-]+$/;
-  
-  if (!googleDrivePattern.test(url) && !railwayPattern.test(url) && !gensparkPattern.test(url)) {
-    console.log('⚠️  URL format not recognized, attempting to process anyway...');
-  }
-  
   return url;
 }
 
@@ -56,7 +37,7 @@ function validateValue(value) {
   if (!value || value === '' || value === '..' || value === 'NaN') return null;
   const numValue = parseFloat(value);
   if (isNaN(numValue) || !isFinite(numValue)) return null;
-  if (numValue < -1000000000 || numValue > 1000000000) return null;
+  if (numValue < -1000000 || numValue > 1000000000) return null;
   return numValue;
 }
 
@@ -76,60 +57,77 @@ function validateIndicatorCode(code) {
   return code.replace(/[^A-Z0-9._-]/g, '').substring(0, 50);
 }
 
-// Get industry for OECD indicator using your mapping table
-async function getIndicatorIndustry(indicatorCode) {
+// Pre-load all mappings once at startup
+async function preloadMappings() {
   const client = await pool.connect();
   try {
-    const result = await client.query(`
-      SELECT industry 
+    console.log('🔄 Pre-loading indicator and country mappings...');
+    
+    // Load indicator mappings
+    const indicatorResult = await client.query(`
+      SELECT oecd_code, industry 
       FROM indicator_mappings 
-      WHERE oecd_code = $1
-    `, [indicatorCode]);
+      WHERE oecd_code IS NOT NULL
+    `);
     
-    if (result.rows.length > 0) {
-      return result.rows[0].industry;
-    }
-    return 'general'; // Default for unmapped indicators
-  } catch (error) {
-    console.error(`Error mapping indicator ${indicatorCode}:`, error);
-    return 'general';
-  } finally {
-    client.release();
-  }
-}
-
-// Get country name from mapping table
-async function getCountryName(countryCode) {
-  const client = await pool.connect();
-  try {
-    const result = await client.query(`
-      SELECT country_name 
+    indicatorResult.rows.forEach(row => {
+      INDICATOR_MAPPINGS[row.oecd_code] = row.industry;
+    });
+    
+    // Load country mappings
+    const countryResult = await client.query(`
+      SELECT oecd_code, country_name, unified_code
       FROM country_mappings 
-      WHERE oecd_code = $1 OR unified_code = $1
-    `, [countryCode]);
+      WHERE oecd_code IS NOT NULL
+    `);
     
-    if (result.rows.length > 0) {
-      return result.rows[0].country_name;
-    }
-    return countryCode; // Fallback to code if no mapping found
+    countryResult.rows.forEach(row => {
+      COUNTRY_MAPPINGS[row.oecd_code] = {
+        name: row.country_name,
+        unified_code: row.unified_code
+      };
+    });
+    
+    console.log(`✅ Pre-loaded ${Object.keys(INDICATOR_MAPPINGS).length} indicator mappings`);
+    console.log(`✅ Pre-loaded ${Object.keys(COUNTRY_MAPPINGS).length} country mappings`);
+    
   } catch (error) {
-    console.error(`Error mapping country ${countryCode}:`, error);
-    return countryCode;
+    console.error('❌ Error pre-loading mappings:', error);
+    throw error;
   } finally {
     client.release();
   }
 }
 
-// Enhanced CSV processing with GenSpark URL support
+// Simple lookup functions - NO DATABASE CALLS
+function getIndicatorIndustry(indicatorCode) {
+  return INDICATOR_MAPPINGS[indicatorCode] || 'general';
+}
+
+function getCountryInfo(countryCode) {
+  const mapping = COUNTRY_MAPPINGS[countryCode];
+  if (mapping) {
+    return {
+      name: mapping.name,
+      unified_code: mapping.unified_code
+    };
+  }
+  return {
+    name: countryCode,
+    unified_code: countryCode
+  };
+}
+
+// CSV processing with URL handling
 async function processCSVFromURL(url, processingFunction) {
   const validatedUrl = validateURL(url);
   
   return new Promise((resolve, reject) => {
-    console.log(`🚀 Attempting to download OECD MSTI data from: ${validatedUrl}`);
+    console.log(`🚀 Attempting to download from: ${validatedUrl}`);
     
     const timeout = setTimeout(() => {
-      reject(new Error('Download timeout (10 minutes)'));
-    }, 600000); // 10 minute timeout
+      reject(new Error('Download timeout'));
+    }, 900000); // 15 minute timeout
     
     const makeRequest = (requestUrl, redirectCount = 0) => {
       if (redirectCount > 10) {
@@ -147,15 +145,20 @@ async function processCSVFromURL(url, processingFunction) {
         path: urlObj.pathname + urlObj.search,
         method: 'GET',
         headers: {
-          'User-Agent': 'Mozilla/5.0 (Industry-Intelligence-DB/1.0)',
-          'Accept': 'text/csv,application/csv,text/plain,*/*'
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
         }
       };
       
       const req = client.request(options, (response) => {
         console.log(`🔄 Response status: ${response.statusCode}`);
         console.log(`📄 Content-Type: ${response.headers['content-type']}`);
-        console.log(`📊 Content-Length: ${response.headers['content-length']}`);
+        
+        if (response.statusCode === 200) {
+          console.log(`📊 Processing OECD data...`);
+          clearTimeout(timeout);
+          processingFunction(response, resolve, reject);
+          return;
+        }
         
         // Handle redirects
         if ([301, 302, 303, 307, 308].includes(response.statusCode)) {
@@ -167,55 +170,8 @@ async function processCSVFromURL(url, processingFunction) {
           }
         }
         
-        if (response.statusCode === 200) {
-          const contentType = response.headers['content-type'] || '';
-          
-          // Accept CSV, text, or octet-stream content
-          if (contentType.includes('text/csv') || 
-              contentType.includes('application/csv') ||
-              contentType.includes('text/plain') ||
-              contentType.includes('application/octet-stream') ||
-              contentType.includes('charset=UTF-8')) {
-            console.log(`📊 Receiving OECD MSTI data (${response.headers['content-length']} bytes)...`);
-            clearTimeout(timeout);
-            processingFunction(response, resolve, reject);
-            return;
-          }
-          
-          // Handle HTML response (potential download page)
-          if (contentType.includes('text/html')) {
-            console.log(`🌐 Received HTML page, attempting to extract download link...`);
-            
-            let htmlData = '';
-            response.on('data', chunk => {
-              htmlData += chunk.toString();
-            });
-            
-            response.on('end', () => {
-              // Try to process as CSV anyway (some servers return HTML content-type for CSV)
-              console.log(`🔄 Attempting to process HTML response as CSV...`);
-              const csvResponse = {
-                pipe: (parser) => {
-                  parser.write(htmlData);
-                  parser.end();
-                  return parser;
-                },
-                on: (event, callback) => {
-                  if (event === 'end') {
-                    setTimeout(callback, 100);
-                  }
-                  return this;
-                }
-              };
-              processingFunction(csvResponse, resolve, reject);
-            });
-            return;
-          }
-        }
-        
-        // If we get here, something went wrong
         clearTimeout(timeout);
-        reject(new Error(`Unexpected response: ${response.statusCode} ${response.headers['content-type']}`));
+        reject(new Error(`HTTP ${response.statusCode}: ${response.statusMessage}`));
       });
       
       req.on('error', (error) => {
@@ -230,60 +186,45 @@ async function processCSVFromURL(url, processingFunction) {
   });
 }
 
-// Main OECD MSTI data processing
+// Main OECD data processing - NO DATABASE CALLS IN LOOP
 async function processOECDMSTIData(url) {
   console.log('🔄 Processing OECD MSTI data file...');
   
-  return processCSVFromURL(url, async (response, resolve, reject) => {
+  return processCSVFromURL(url, (response, resolve, reject) => {
     const results = [];
     let rowCount = 0;
     let processedCount = 0;
     let validationErrors = 0;
-    let relevantRows = 0;
     let skippedRows = 0;
     
     const industryStats = {};
     
     response
       .pipe(csv())
-      .on('data', async (row) => {
+      .on('data', (row) => {
         rowCount++;
-        
-        if (rowCount % 10000 === 0) {
+        if (rowCount % 50000 === 0) {
           console.log(`📊 Processed ${rowCount} rows, found ${processedCount} valid data points, ${validationErrors} validation errors...`);
         }
         
         try {
-          // Extract and validate core fields
           const countryCode = validateCountryCode(row['REF_AREA']);
           const indicatorCode = validateIndicatorCode(row['MEASURE']);
           const year = validateYear(row['TIME_PERIOD']);
           const value = validateValue(row['OBS_VALUE']);
           
-          if (!countryCode || !indicatorCode || !year) {
-            validationErrors++;
+          if (!countryCode || !indicatorCode || !year || value === null) {
+            if (!countryCode || !indicatorCode || !year) {
+              validationErrors++;
+            } else {
+              skippedRows++;
+            }
             return;
           }
           
-          // Skip zero values (many in OECD data)
-          if (value === 0) {
-            skippedRows++;
-            return;
-          }
-          
-          // Skip null values
-          if (value === null) {
-            skippedRows++;
-            return;
-          }
-          
-          relevantRows++;
-          
-          // Get industry mapping
-          const industry = await getIndicatorIndustry(indicatorCode);
-          
-          // Get country name
-          const countryName = await getCountryName(countryCode);
+          // Simple lookups - NO DATABASE CALLS
+          const industry = getIndicatorIndustry(indicatorCode);
+          const countryInfo = getCountryInfo(countryCode);
           
           // Track industry statistics
           if (!industryStats[industry]) {
@@ -292,14 +233,13 @@ async function processOECDMSTIData(url) {
           industryStats[industry]++;
           
           results.push({
-            country_code: countryCode,
-            country_name: countryName,
+            country_code: countryInfo.unified_code,
+            country_name: countryInfo.name,
             indicator_code: indicatorCode,
-            indicator_description: sanitizeString(row['Measure'], 255),
+            indicator_name: sanitizeString(row['Measure'], 255),
             year: year,
             value: value,
             industry: industry,
-            unit: sanitizeString(row['Unit of measure'], 50),
             source: 'OECD'
           });
           
@@ -311,12 +251,11 @@ async function processOECDMSTIData(url) {
         }
       })
       .on('end', () => {
-        console.log(`✅ OECD MSTI data processing complete!`);
+        console.log(`✅ Enhanced OECD data processing complete!`);
         console.log(`   - Total CSV rows processed: ${rowCount}`);
         console.log(`   - Valid data points extracted: ${processedCount}`);
         console.log(`   - Validation errors: ${validationErrors}`);
-        console.log(`   - Skipped rows (zero/null values): ${skippedRows}`);
-        console.log(`   - Relevant rows: ${relevantRows}`);
+        console.log(`   - Skipped rows: ${skippedRows}`);
         
         console.log(`\n📊 Industry distribution:`);
         Object.entries(industryStats).forEach(([industry, count]) => {
@@ -332,10 +271,10 @@ async function processOECDMSTIData(url) {
   });
 }
 
-// Secure batch data insertion into oecd_indicators table
-async function insertOECDData(data) {
+// Batch insertion (same as your WB script)
+async function insertBatchOECDData(data) {
   if (data.length === 0) {
-    console.log('⚠️  No OECD data to insert');
+    console.log('⚠️  No data to insert');
     return;
   }
   
@@ -343,10 +282,8 @@ async function insertOECDData(data) {
   
   try {
     await client.query('BEGIN');
-    
-    // Clear existing OECD data
-    const deleteResult = await client.query('DELETE FROM oecd_indicators WHERE source = $1', ['OECD']);
-    console.log(`🗑️ Cleared ${deleteResult.rowCount} existing OECD records`);
+    await client.query('DELETE FROM oecd_indicators WHERE source = $1', ['OECD']);
+    console.log('🗑️ Cleared existing OECD data');
     
     const batchSize = 1000;
     const totalBatches = Math.ceil(data.length / batchSize);
@@ -361,14 +298,14 @@ async function insertOECDData(data) {
       for (const item of batch) {
         valueStrings.push(`($${paramIndex}, $${paramIndex + 1}, $${paramIndex + 2}, $${paramIndex + 3}, $${paramIndex + 4}, $${paramIndex + 5}, $${paramIndex + 6}, $${paramIndex + 7}, $${paramIndex + 8})`);
         values.push(
-          null, // dataflow - not used in our simplified structure
+          null, // dataflow
           item.country_code,
           item.indicator_code,
           item.year.toString(),
           item.value,
           item.industry,
           item.source,
-          4, // data_quality_score for OECD
+          4, // data_quality_score
           new Date() // created_at
         );
         paramIndex += 9;
@@ -386,160 +323,70 @@ async function insertOECDData(data) {
     
     await client.query('COMMIT');
     console.log('🎉 OECD data insertion complete!');
-    
-    // Show final statistics
-    const statsResult = await client.query(`
-      SELECT 
-        industry,
-        COUNT(*) as records,
-        COUNT(DISTINCT country_code) as countries,
-        COUNT(DISTINCT indicator_code) as indicators,
-        MIN(time_period::integer) as min_year,
-        MAX(time_period::integer) as max_year
-      FROM oecd_indicators 
-      GROUP BY industry 
-      ORDER BY records DESC
-    `);
-    
-    console.log('\n📊 Final OECD data statistics by industry:');
-    statsResult.rows.forEach(row => {
-      console.log(`   ${row.industry}: ${row.records} records, ${row.countries} countries, ${row.indicators} indicators (${row.min_year}-${row.max_year})`);
-    });
-    
   } catch (error) {
     await client.query('ROLLBACK');
-    console.error('❌ Error inserting OECD data:', error);
+    console.error('❌ Error inserting data:', error);
     throw error;
   } finally {
     client.release();
   }
 }
 
-// Update data source last_updated timestamp
-async function updateDataSourceTimestamp() {
-  const client = await pool.connect();
-  try {
-    await client.query(`
-      UPDATE data_sources 
-      SET last_updated = CURRENT_TIMESTAMP 
-      WHERE source_code = 'OECD'
-    `);
-    console.log('✅ Updated OECD data source timestamp');
-  } catch (error) {
-    console.error('❌ Error updating data source timestamp:', error);
-  } finally {
-    client.release();
-  }
-}
-
-// Show integration success summary
+// Show integration summary
 async function showIntegrationSummary() {
   const client = await pool.connect();
   try {
     console.log('\n🎯 MULTI-SOURCE INTEGRATION SUMMARY');
     console.log('====================================');
     
-    // Total records by source
-    const sourceStats = await client.query(`
-      SELECT 
-        'World Bank' as source,
-        COUNT(*) as records,
-        COUNT(DISTINCT country_code) as countries,
-        COUNT(DISTINCT indicator_code) as indicators
-      FROM indicators
-      WHERE source = 'WB'
-      UNION ALL
-      SELECT 
-        'OECD' as source,
-        COUNT(*) as records,
-        COUNT(DISTINCT country_code) as countries,
-        COUNT(DISTINCT indicator_code) as indicators
-      FROM oecd_indicators
-      WHERE source = 'OECD'
-    `);
+    // Get total counts
+    const wbCount = await client.query('SELECT COUNT(*) FROM indicators WHERE source = $1', ['WB']);
+    const oecdCount = await client.query('SELECT COUNT(*) FROM oecd_indicators WHERE source = $1', ['OECD']);
     
-    console.log('📊 Data by source:');
-    sourceStats.rows.forEach(row => {
-      console.log(`   ${row.source}: ${row.records} records, ${row.countries} countries, ${row.indicators} indicators`);
-    });
+    console.log(`📊 Database Summary:`);
+    console.log(`   World Bank: ${wbCount.rows[0].count} records`);
+    console.log(`   OECD: ${oecdCount.rows[0].count} records`);
+    console.log(`   Total: ${parseInt(wbCount.rows[0].count) + parseInt(oecdCount.rows[0].count)} records`);
     
-    // Industry enhancement comparison
-    const industryComparison = await client.query(`
-      SELECT 
-        wb.industry,
-        wb.wb_records,
-        COALESCE(oecd.oecd_records, 0) as oecd_records,
-        wb.wb_records + COALESCE(oecd.oecd_records, 0) as total_records
-      FROM (
-        SELECT industry, COUNT(*) as wb_records
-        FROM indicators 
-        WHERE source = 'WB'
-        GROUP BY industry
-      ) wb
-      LEFT JOIN (
-        SELECT industry, COUNT(*) as oecd_records
-        FROM oecd_indicators
-        WHERE source = 'OECD'
-        GROUP BY industry
-      ) oecd ON wb.industry = oecd.industry
-      ORDER BY total_records DESC
-    `);
-    
-    console.log('\n🏭 Industry enhancement (WB + OECD):');
-    industryComparison.rows.forEach(row => {
-      const enhancement = row.oecd_records > 0 ? 
-        `+${row.oecd_records} (${((row.oecd_records / row.wb_records) * 100).toFixed(1)}% increase)` :
-        'No OECD data';
-      console.log(`   ${row.industry}: ${row.wb_records} (WB) + ${row.oecd_records} (OECD) = ${row.total_records} total`);
-    });
-    
-    // Calculate total database size
-    const totalResult = await client.query(`
-      SELECT 
-        (SELECT COUNT(*) FROM indicators WHERE source = 'WB') +
-        (SELECT COUNT(*) FROM oecd_indicators WHERE source = 'OECD') as total_records
-    `);
-    
-    console.log(`\n🎉 INTEGRATION COMPLETE!`);
-    console.log(`   Total database size: ${totalResult.rows[0].total_records} records`);
-    console.log(`   Multi-source platform: World Bank + OECD`);
-    console.log(`   Ready for ChatGPT report generation`);
+    console.log(`\n🎉 MULTI-SOURCE INTEGRATION COMPLETE!`);
+    console.log(`✅ Your database is now a multi-source powerhouse!`);
     
   } catch (error) {
-    console.error('❌ Error generating integration summary:', error);
+    console.error('❌ Error showing summary:', error);
   } finally {
     client.release();
   }
 }
 
-// Main OECD processing function
-async function processOECDIntegration(url) {
+// Main processing function
+async function processEnhancedOECDData(url) {
   try {
-    console.log('🚀 Starting OECD MSTI Integration...');
-    console.log('====================================');
-    console.log('🔒 Safe mode: Adding OECD data without touching World Bank data');
-    console.log('🎯 Target: Transform innovation from weakest to strongest industry');
+    console.log('🚀 Starting Enhanced OECD MSTI Processing...');
+    console.log('============================================');
+    console.log('🔒 Zero database calls during CSV processing');
+    console.log('📊 Using proven batch processing (1000 records per batch)');
     
-    console.log('\n⏳ Step 1: Processing OECD MSTI CSV file...');
+    // Step 1: Pre-load mappings ONCE
+    await preloadMappings();
+    
+    // Step 2: Process OECD data (no database calls in loop)
+    console.log('\n⏳ Processing OECD MSTI data...');
     const oecdData = await processOECDMSTIData(url);
     
-    console.log('\n⏳ Step 2: Inserting OECD data into database...');
-    await insertOECDData(oecdData);
+    // Step 3: Insert data in batches
+    console.log('\n💾 Starting secure batch insertion...');
+    await insertBatchOECDData(oecdData);
     
-    console.log('\n⏳ Step 3: Updating data source metadata...');
-    await updateDataSourceTimestamp();
-    
-    console.log('\n⏳ Step 4: Generating integration summary...');
+    // Step 4: Show summary
     await showIntegrationSummary();
     
-    console.log('\n🎉 OECD MSTI INTEGRATION COMPLETE!');
-    console.log('✅ OECD data successfully integrated');
-    console.log('✅ World Bank data completely preserved');
-    console.log('✅ Multi-source database operational');
-    console.log('✅ Ready for unified view creation');
+    console.log('\n🎉 ENHANCED OECD PROCESSING COMPLETE!');
+    console.log(`📊 Final statistics:`);
+    console.log(`   - Total OECD data points: ${oecdData.length}`);
+    console.log(`   - Multi-source database ready`);
     
   } catch (error) {
-    console.error('❌ OECD integration failed:', error);
+    console.error('❌ Enhanced processing failed:', error);
     throw error;
   }
 }
@@ -551,28 +398,25 @@ function parseArguments() {
   const urlIndex = args.indexOf('--url');
   if (urlIndex === -1 || !args[urlIndex + 1]) {
     console.error('❌ Usage: npm run process-oecd -- --url "YOUR_OECD_CSV_URL"');
-    console.error('📁 Example: npm run process-oecd -- --url "https://page.gensparksite.com/get_upload_url/..."');
     process.exit(1);
   }
   
-  return {
-    url: args[urlIndex + 1]
-  };
+  return { url: args[urlIndex + 1] };
 }
 
 // Command line usage
 if (require.main === module) {
   const { url } = parseArguments();
   
-  processOECDIntegration(url)
+  processEnhancedOECDData(url)
     .then(() => {
-      console.log('✅ OECD integration complete! Your multi-source database is ready.');
+      console.log('✅ All processing complete! Multi-source database ready.');
       process.exit(0);
     })
     .catch(error => {
-      console.error('❌ OECD integration failed:', error);
+      console.error('❌ Processing failed:', error);
       process.exit(1);
     });
 }
 
-module.exports = { processOECDIntegration };
+module.exports = { processEnhancedOECDData };
